@@ -1,0 +1,20 @@
+{
+  "name": "krishimitra-ai",
+  "version": "0.1.0",
+  "private": true,
+  "description": "KrishiMitra-AI: Multi-tenant SaaS platform for AI-powered agricultural decision support",
+  "workspaces": [
+    "packages/backend",
+    "packages/frontend"
+  ],
+  "scripts": {
+    "backend": "npm run --workspace=packages/backend",
+    "frontend": "npm run --workspace=packages/frontend",
+    "test": "npm run test --workspaces",
+    "lint": "npm run lint --workspaces",
+    "build": "npm run build --workspaces"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "name": "@krishimitra/frontend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "KrishiMitra-AI frontend PWA",
+  "scripts": {
+    "dev": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test --watchAll=false",
+    "lint": "eslint src/ --ext .ts,.tsx"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.22.0",
+    "typescript": "^5.4.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.55",
+    "@types/react-dom": "^18.2.19",
+    "@types/jest": "^29.5.12",
+    "@testing-library/react": "^14.2.0",
+    "@testing-library/jest-dom": "^6.4.0",
+    "@testing-library/user-event": "^14.5.2",
+    "@typescript-eslint/parser": "^7.0.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "eslint": "^8.57.0",
+    "eslint-plugin-react": "^7.33.2",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "react-scripts": "5.0.1",
+    "fast-check": "^3.17.0"
+  },
+  "browserslist": {
+    "production": [">0.2%", "not dead", "not op_mini all"],
+    "development": ["last 1 chrome version", "last 1 firefox version", "last 1 safari version"]
+  }
+}
