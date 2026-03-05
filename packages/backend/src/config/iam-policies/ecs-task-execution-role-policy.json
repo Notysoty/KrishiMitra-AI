@@ -1,0 +1,37 @@
+{
+  "_comment": "IAM policy for the ECS Task Execution Role (shared across all services). Grants permissions needed by ECS to pull container images and write logs. No application-level permissions — those are in per-service task roles.",
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ECRImagePull",
+      "Effect": "Allow",
+      "Action": [
+        "ecr:GetAuthorizationToken",
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:GetDownloadUrlForLayer",
+        "ecr:BatchGetImage"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "CloudWatchLogsForECS",
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ],
+      "Resource": "arn:aws:logs:*:*:log-group:/ecs/krishimitra-*:*"
+    },
+    {
+      "Sid": "SecretsManagerForECSInjection",
+      "Effect": "Allow",
+      "Action": [
+        "secretsmanager:GetSecretValue"
+      ],
+      "Resource": [
+        "arn:aws:secretsmanager:*:*:secret:krishimitra/db-credentials/*"
+      ]
+    }
+  ]
+}

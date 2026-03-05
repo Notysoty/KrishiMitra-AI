@@ -1,0 +1,51 @@
+{
+  "_comment": "IAM policy for the Farm Service (ECS task role). Grants write access to user-uploads bucket (crop images) and read access to Secrets Manager for DB credentials.",
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "WriteUserUploads",
+      "Effect": "Allow",
+      "Action": [
+        "s3:PutObject",
+        "s3:GetObject",
+        "s3:DeleteObject",
+        "s3:ListBucket"
+      ],
+      "Resource": [
+        "arn:aws:s3:::krishimitra-user-uploads",
+        "arn:aws:s3:::krishimitra-user-uploads/*"
+      ]
+    },
+    {
+      "Sid": "ReadSecretsManagerSecrets",
+      "Effect": "Allow",
+      "Action": [
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:DescribeSecret"
+      ],
+      "Resource": [
+        "arn:aws:secretsmanager:*:*:secret:krishimitra/farm-service/*",
+        "arn:aws:secretsmanager:*:*:secret:krishimitra/db-credentials/*"
+      ]
+    },
+    {
+      "Sid": "WriteCloudWatchLogs",
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ],
+      "Resource": "arn:aws:logs:*:*:log-group:/krishimitra/farm-service:*"
+    },
+    {
+      "Sid": "XRayTracing",
+      "Effect": "Allow",
+      "Action": [
+        "xray:PutTraceSegments",
+        "xray:PutTelemetryRecords"
+      ],
+      "Resource": "*"
+    }
+  ]
+}

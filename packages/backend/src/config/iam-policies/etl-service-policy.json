@@ -1,0 +1,52 @@
+{
+  "_comment": "IAM policy for the ETL Service (ECS task role). Grants write access to data buckets (market prices, weather) and read access to source data. No access to knowledge-base or user-uploads buckets.",
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "WriteDataBuckets",
+      "Effect": "Allow",
+      "Action": [
+        "s3:PutObject",
+        "s3:GetObject",
+        "s3:DeleteObject",
+        "s3:ListBucket"
+      ],
+      "Resource": [
+        "arn:aws:s3:::krishimitra-market-data",
+        "arn:aws:s3:::krishimitra-market-data/*",
+        "arn:aws:s3:::krishimitra-weather-data",
+        "arn:aws:s3:::krishimitra-weather-data/*"
+      ]
+    },
+    {
+      "Sid": "ReadSecretsManagerSecrets",
+      "Effect": "Allow",
+      "Action": [
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:DescribeSecret"
+      ],
+      "Resource": [
+        "arn:aws:secretsmanager:*:*:secret:krishimitra/etl-service/*"
+      ]
+    },
+    {
+      "Sid": "WriteCloudWatchLogs",
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ],
+      "Resource": "arn:aws:logs:*:*:log-group:/krishimitra/etl-service:*"
+    },
+    {
+      "Sid": "XRayTracing",
+      "Effect": "Allow",
+      "Action": [
+        "xray:PutTraceSegments",
+        "xray:PutTelemetryRecords"
+      ],
+      "Resource": "*"
+    }
+  ]
+}

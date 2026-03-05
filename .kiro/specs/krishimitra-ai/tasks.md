@@ -191,7 +191,7 @@ This plan implements the KrishiMitra-AI multi-tenant SaaS platform for AI-powere
     - Test that for any valid crop image, classification completes within 8 seconds and returns a confidence score between 0 and 1
     - **Validates: Requirements 7.1, 7.2**
 
-- [ ] 8. Implement Market Intelligence Service
+- [x] 8. Implement Market Intelligence Service
   - [x] 8.1 Implement market price data management and historical display
     - Create `MarketService` with `getPrices`, `getHistoricalPrices` methods
     - Display historical data for minimum 6 months
@@ -209,7 +209,7 @@ This plan implements the KrishiMitra-AI multi-tenant SaaS platform for AI-powere
     - Test that for any market price data displayed, the response includes a "Last Updated" timestamp
     - **Validates: Requirements 9.3**
 
-  - [ ] 8.3 Implement MarketIntelligence with recommendations and explainability
+  - [x] 8.3 Implement MarketIntelligence with recommendations and explainability
     - Create `MarketIntelligence` class with `getRecommendations` method
     - Implement Haversine distance calculation between farm and markets
     - Estimate transportation cost (₹5/km baseline)
@@ -232,7 +232,7 @@ This plan implements the KrishiMitra-AI multi-tenant SaaS platform for AI-powere
     - Use `fast-check` with arbitrary crop, farm location, and market price arrays
     - **Validates: Requirements 10.4**
 
-  - [~] 8.6 Implement PriceForecaster with confidence intervals
+  - [x] 8.6 Implement PriceForecaster with confidence intervals
     - Create `PriceForecaster` class with `forecast` method
     - Implement simple moving average forecast using last 6 months of data
     - Calculate volatility and map to confidence levels (High/Medium/Low)
@@ -249,8 +249,8 @@ This plan implements the KrishiMitra-AI multi-tenant SaaS platform for AI-powere
     - Test that for any price forecast, the response includes a confidence interval range (lower and upper bounds)
     - **Validates: Requirements 11.2**
 
-- [ ] 9. Implement Alert Service
-  - [~] 9.1 Implement AlertGenerator for price and weather alerts
+- [x] 9. Implement Alert Service
+  - [x] 9.1 Implement AlertGenerator for price and weather alerts
     - Create `AlertGenerator` class with `checkPriceAlerts` and `checkWeatherAlerts` methods
     - Trigger price alerts when crop price changes >15% in 7 days or crosses custom thresholds
     - Trigger weather alerts when severe weather forecasted within 48 hours (rainfall >100mm, temperature >40°C)
@@ -260,7 +260,7 @@ This plan implements the KrishiMitra-AI multi-tenant SaaS platform for AI-powere
     - Suppress dismissed alerts for 48 hours
     - _Requirements: 12.1, 12.3, 12.5, 12.6, 12.7, 16.1, 16.3, 16.4_
 
-  - [~] 9.2 Implement alert delivery (in-app, SMS) and preferences
+  - [x] 9.2 Implement alert delivery (in-app, SMS) and preferences
     - Create multi-channel delivery: in-app notifications and optional SMS
     - Implement alert preferences management per user (in-app, SMS, email toggles; event type toggles)
     - Track delivery status for each channel
@@ -268,11 +268,11 @@ This plan implements the KrishiMitra-AI multi-tenant SaaS platform for AI-powere
     - Also create price alert CRUD: `POST /api/v1/markets/alerts`, `GET /api/v1/markets/alerts`
     - _Requirements: 12.2, 12.4, 16.2, 16.5, 16.6, 16.7_
 
-- [ ] 10. Checkpoint - Market intelligence and alerts
+- [x] 10. Checkpoint - Market intelligence and alerts
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 11. Implement Sustainability Service
-  - [~] 11.1 Implement water efficiency tracking
+- [x] 11. Implement Sustainability Service
+  - [x] 11.1 Implement water efficiency tracking
     - Create `SustainabilityCalculator` class with `calculateWaterEfficiency` method
     - Calculate liters per hectare per crop cycle from input logs
     - Compare against regional benchmarks (anonymized aggregate data)
@@ -293,7 +293,7 @@ This plan implements the KrishiMitra-AI multi-tenant SaaS platform for AI-powere
     - Test that for any sustainability metric calculation, the response includes an explanation describing the logic and benchmark comparison
     - **Validates: Requirements 13.4**
 
-  - [~] 11.4 Implement input cost/yield tracking and climate risk index
+  - [x] 11.4 Implement input cost/yield tracking and climate risk index
     - Implement `calculateInputEfficiency` method: cost per unit of yield, comparison to benchmarks, savings estimates
     - Implement `calculateClimateRiskIndex` method: assess risks from weather forecast (heavy rainfall, heat stress, drought)
     - Calculate overall risk level (Low/Medium/High) with contributing factors
@@ -304,8 +304,8 @@ This plan implements the KrishiMitra-AI multi-tenant SaaS platform for AI-powere
     - Create API routes: `GET /api/v1/sustainability/input-efficiency/:farmId`, `GET /api/v1/sustainability/climate-risk/:farmId`, `GET /api/v1/sustainability/insights/:farmId`
     - _Requirements: 14.1, 14.2, 14.3, 14.4, 14.5, 14.6, 14.7, 14.8, 15.1, 15.2, 15.3, 15.4, 15.5, 15.6, 15.7, 15.8_
 
-- [ ] 12. Implement Admin Services
-  - [~] 12.1 Implement Tenant Administration service
+- [x] 12. Implement Admin Services
+  - [x] 12.1 Implement Tenant Administration service
     - Create `TenantAdminService` with tenant branding configuration (logo, colors, org name)
     - Implement user management: add, remove, role assignment
     - Support regional preferences, supported crops/markets/languages configuration
@@ -316,7 +316,7 @@ This plan implements the KrishiMitra-AI multi-tenant SaaS platform for AI-powere
     - Maintain audit log of all administrative actions
     - _Requirements: 21.1, 21.2, 21.3, 21.4, 21.5, 21.6, 21.7, 21.8, 21.9_
 
-  - [~] 12.2 Implement Platform Administration service
+  - [x] 12.2 Implement Platform Administration service
     - Create `PlatformAdminService` with tenant provisioning (create, suspend, delete)
     - Implement dashboard: all tenants with status, user counts, resource usage
     - Support global AI model/provider/safety policy configuration
@@ -331,14 +331,14 @@ This plan implements the KrishiMitra-AI multi-tenant SaaS platform for AI-powere
     - Test that for any tenant deletion, all associated data is removed while audit logs are preserved for compliance
     - **Validates: Requirements 1.3**
 
-  - [~] 12.4 Implement Content Moderation and Field Officer Group Management
+  - [x] 12.4 Implement Content Moderation and Field Officer Group Management
     - Create content moderation workflow: queue AI-generated content for agronomist review, approval/rejection with logging, version control, outdated content flagging (>12 months), automated content filtering
     - Create `GroupService` for Field Officer group management: create groups, add farmers by phone, broadcast messages with delivery tracking, view tracking, group analytics, export group data
     - Support groups of up to 100 farmers for MVP
     - _Requirements: 23.1, 23.2, 23.3, 23.4, 23.5, 23.6, 23.7, 23.8, 24.1, 24.2, 24.3, 24.4, 24.5, 24.6, 24.7_
 
-- [ ] 13. Implement Audit, Observability, and Error Handling
-  - [~] 13.1 Implement Audit Trail service
+- [x] 13. Implement Audit, Observability, and Error Handling
+  - [x] 13.1 Implement Audit Trail service
     - Create `AuditService` with immutable audit log recording
     - Log all admin actions with timestamp, actor, action type, affected resources
     - Record sensitive data access events
@@ -349,7 +349,7 @@ This plan implements the KrishiMitra-AI multi-tenant SaaS platform for AI-powere
     - Retain audit logs for minimum 3 years
     - _Requirements: 28.1, 28.2, 28.3, 28.4, 28.5, 28.6, 28.7, 28.8, 28.9_
 
-  - [~] 13.2 Implement structured logging, distributed tracing, and monitoring (Amazon CloudWatch + AWS X-Ray)
+  - [x] 13.2 Implement structured logging, distributed tracing, and monitoring (Amazon CloudWatch + AWS X-Ray)
     - Implement structured JSON logging across all services; ship logs to Amazon CloudWatch Logs
     - Set up distributed tracing for cross-service request flows using AWS X-Ray
     - Track KPIs: response time, error rate, availability via CloudWatch metrics and dashboards
@@ -360,7 +360,7 @@ This plan implements the KrishiMitra-AI multi-tenant SaaS platform for AI-powere
     - Retain logs for minimum 30 days
     - _Requirements: 29.1, 29.2, 29.3, 29.4, 29.5, 29.6, 29.7, 29.8, 29.9, 29.10_
 
-  - [~] 13.3 Implement error handling, circuit breakers, and retry strategies
+  - [x] 13.3 Implement error handling, circuit breakers, and retry strategies
     - Create `CircuitBreaker` class with closed/open/half-open states and configurable failure thresholds
     - Implement `retryWithBackoff` utility with exponential backoff (configurable max retries and base delay)
     - Implement graceful degradation: cached fallback for AI, market, weather service failures
@@ -381,11 +381,11 @@ This plan implements the KrishiMitra-AI multi-tenant SaaS platform for AI-powere
     - Test that for any error response shown to users, the message is user-friendly and does not expose stack traces or internal system information
     - **Validates: Requirements 31.4**
 
-- [ ] 14. Checkpoint - Backend services complete
+- [x] 14. Checkpoint - Backend services complete
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 15. Implement ML Operations and Data Pipelines
-  - [~] 15.1 Implement ML model monitoring and versioning
+- [x] 15. Implement ML Operations and Data Pipelines
+  - [x] 15.1 Implement ML model monitoring and versioning
     - Create `MLOpsService` to track inference latency, throughput, error rates per model
     - Monitor confidence score distributions to detect model degradation
     - Alert ML_Ops when accuracy drops below 75% on benchmarks
@@ -395,7 +395,7 @@ This plan implements the KrishiMitra-AI multi-tenant SaaS platform for AI-powere
     - Generate daily performance metrics and weekly reports
     - _Requirements: 30.1, 30.2, 30.3, 30.4, 30.5, 30.6, 30.7, 30.8, 30.9, 30.10_
 
-  - [~] 15.2 Implement ETL pipelines for market prices and weather data
+  - [x] 15.2 Implement ETL pipelines for market prices and weather data
     - Create `ETLService` with configurable pipeline execution for market prices, weather, and scheme data
     - Implement data validation against schemas before loading
     - Handle data quality issues: skip corrupted records, alert ML_Ops
@@ -406,8 +406,8 @@ This plan implements the KrishiMitra-AI multi-tenant SaaS platform for AI-powere
     - Support configuration-driven pipeline creation for new data sources
     - _Requirements: 32.1, 32.2, 32.3, 32.4, 32.5, 32.6, 32.7, 32.8, 32.9, 32.10_
 
-- [ ] 16. Implement Voice and Speech Services
-  - [~] 16.1 Implement speech-to-text and text-to-speech integration
+- [x] 16. Implement Voice and Speech Services
+  - [x] 16.1 Implement speech-to-text and text-to-speech integration
     - Create `SpeechService` with `speechToText` and `textToSpeech` methods via cloud APIs
     - Support voice input in all 5 MVP languages (Hindi, Tamil, Telugu, Kannada, English)
     - Target minimum 80% accuracy for supported languages
@@ -418,8 +418,8 @@ This plan implements the KrishiMitra-AI multi-tenant SaaS platform for AI-powere
     - Create API routes: `POST /api/v1/ai/speech-to-text`, `POST /api/v1/ai/text-to-speech`
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7_
 
-- [ ] 17. Implement Agentic Workflows and Scheme Eligibility
-  - [~] 17.1 Implement basic agentic workflows
+- [x] 17. Implement Agentic Workflows and Scheme Eligibility
+  - [x] 17.1 Implement basic agentic workflows
     - Create `WorkflowService` with support for "Plan my season" and "Check scheme eligibility" workflows
     - "Plan my season": generate step-by-step plan considering crop selection, planting dates, harvest timing from Farm_Profile
     - "Check scheme eligibility": evaluate applicable government schemes based on Farm_Profile data
@@ -429,7 +429,7 @@ This plan implements the KrishiMitra-AI multi-tenant SaaS platform for AI-powere
     - Create API route: `POST /api/v1/ai/workflow/:type`
     - _Requirements: 18.1, 18.2, 18.3, 18.4, 18.5_
 
-  - [~] 17.2 Implement Government Scheme information service
+  - [x] 17.2 Implement Government Scheme information service
     - Create `SchemeService` with eligibility evaluation based on Farm_Profile
     - Return eligibility status: Eligible/Not Eligible/Insufficient Data
     - Provide step-by-step application guidance for eligible schemes
@@ -439,11 +439,11 @@ This plan implements the KrishiMitra-AI multi-tenant SaaS platform for AI-powere
     - Display "Last Updated" timestamp, warn when info >30 days old
     - _Requirements: 36.1, 36.2, 36.3, 36.4, 36.5, 36.6, 36.7, 36.8_
 
-- [ ] 18. Checkpoint - All backend services complete
+- [x] 18. Checkpoint - All backend services complete
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 19. Implement Frontend PWA - Core Shell and Auth
-  - [~] 19.1 Set up React PWA with service worker and offline support
+- [x] 19. Implement Frontend PWA - Core Shell and Auth
+  - [x] 19.1 Set up React PWA with service worker and offline support
     - Initialize React app with TypeScript, configure PWA manifest and service worker
     - Set up IndexedDB for local data caching (prices, advisories, weather)
     - Implement offline detection and connection status indicator (Online/Offline/Slow)
@@ -463,7 +463,7 @@ This plan implements the KrishiMitra-AI multi-tenant SaaS platform for AI-powere
     - Test that queued requests created while offline are automatically synced when connectivity is restored
     - **Validates: Requirements 34.5**
 
-  - [~] 19.4 Implement authentication UI and i18n framework
+  - [x] 19.4 Implement authentication UI and i18n framework
     - Build login/registration screens with phone OTP flow
     - Implement i18n framework supporting 5 languages: Hindi, Tamil, Telugu, Kannada, English
     - Create language selector component
@@ -471,8 +471,8 @@ This plan implements the KrishiMitra-AI multi-tenant SaaS platform for AI-powere
     - Support biometric authentication where available
     - _Requirements: 2.1, 4.7, 5.2, 35.10_
 
-- [ ] 20. Implement Frontend PWA - Feature Screens
-  - [~] 20.1 Implement Farm Profile and Onboarding UI
+- [x] 20. Implement Frontend PWA - Feature Screens
+  - [x] 20.1 Implement Farm Profile and Onboarding UI
     - Build interactive onboarding tutorial covering key features (Farm_Profile, AI_Assistant, Market_Intelligence)
     - Build Farm Profile creation/edit forms with tooltips and examples
     - Implement GPS-based location capture
@@ -482,7 +482,7 @@ This plan implements the KrishiMitra-AI multi-tenant SaaS platform for AI-powere
     - Offer additional guidance after 3+ failed attempts
     - _Requirements: 4.1, 4.2, 4.3, 8.1, 8.2, 8.3, 8.5, 8.7, 35.3, 35.7_
 
-  - [~] 20.2 Implement AI Chat and Voice interaction UI
+  - [x] 20.2 Implement AI Chat and Voice interaction UI
     - Build conversational chat interface with message history
     - Display confidence scores, citations, and disclaimers in responses
     - Implement voice input button with speech-to-text integration
@@ -493,7 +493,7 @@ This plan implements the KrishiMitra-AI multi-tenant SaaS platform for AI-powere
     - Show classification results with confidence, recommendations, and alternative diagnoses
     - _Requirements: 5.1, 5.3, 5.4, 6.1, 6.2, 6.5, 6.6, 7.1, 7.3, 7.4, 7.8, 7.9_
 
-  - [~] 20.3 Implement Market Intelligence UI
+  - [x] 20.3 Implement Market Intelligence UI
     - Build market price display with historical charts (6 months)
     - Show data source labels, "Last Updated" timestamps, volatility indicators
     - Display stale data warnings (>7 days old)
@@ -503,7 +503,7 @@ This plan implements the KrishiMitra-AI multi-tenant SaaS platform for AI-powere
     - Display alert notifications with actionable information
     - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5, 9.6, 9.7, 10.1, 10.3, 10.4, 10.5, 11.1, 11.2, 11.3, 11.5, 12.2, 12.4_
 
-  - [~] 20.4 Implement Sustainability Dashboard UI
+  - [x] 20.4 Implement Sustainability Dashboard UI
     - Build water efficiency display with visual charts and efficiency rating
     - Build input cost/yield tracking UI with trend charts over crop cycles
     - Build climate risk index display with contributing factors and recommendations
@@ -512,7 +512,7 @@ This plan implements the KrishiMitra-AI multi-tenant SaaS platform for AI-powere
     - Show "Last Updated" timestamps and handle unavailable data gracefully
     - _Requirements: 13.3, 13.4, 13.7, 14.3, 14.4, 14.7, 15.1, 15.2, 15.6, 15.7, 15.8, 16.4_
 
-  - [~] 20.5 Implement Admin Dashboard UI
+  - [x] 20.5 Implement Admin Dashboard UI
     - Build Tenant Admin dashboard: branding config, user management, regional preferences, content approval, usage analytics, bulk CSV import
     - Build Platform Admin dashboard: tenant management, global config, cross-tenant analytics, feature flags, maintenance scheduling
     - Build content moderation review interface: content, sources, confidence scores, approve/reject
@@ -521,8 +521,8 @@ This plan implements the KrishiMitra-AI multi-tenant SaaS platform for AI-powere
     - Build analytics and reporting UI with PDF/CSV export
     - _Requirements: 21.1, 21.2, 21.6, 21.7, 22.1, 22.2, 22.4, 22.8, 23.2, 24.1, 24.2, 24.4, 28.5, 37.1, 37.2, 37.3_
 
-- [ ] 21. Implement Localization, Data Privacy, and Security Hardening
-  - [~] 21.1 Implement localization and cultural adaptation
+- [x] 21. Implement Localization, Data Privacy, and Security Hardening
+  - [x] 21.1 Implement localization and cultural adaptation
     - Implement region-specific crop calendars based on local climate
     - Support Indian measurement units (acres, quintals, liters)
     - Use DD/MM/YYYY date format
@@ -531,7 +531,7 @@ This plan implements the KrishiMitra-AI multi-tenant SaaS platform for AI-powere
     - Allow Tenant_Admins to configure regional preferences
     - _Requirements: 38.1, 38.2, 38.3, 38.4, 38.5, 38.6, 38.7, 38.8_
 
-  - [~] 21.2 Implement data privacy and security measures with IAM least-privilege
+  - [x] 21.2 Implement data privacy and security measures with IAM least-privilege
     - Implement AES-256 encryption at rest for all data (RDS encryption, S3 server-side encryption)
     - Enforce TLS 1.3+ for all data in transit
     - Implement data deletion within 30 days with anonymized analytics preservation
@@ -545,8 +545,8 @@ This plan implements the KrishiMitra-AI multi-tenant SaaS platform for AI-powere
     - Store all application secrets (DB passwords, API keys, OTP provider tokens) in AWS Secrets Manager with automatic rotation
     - _Requirements: 25.1, 25.2, 25.3, 25.4, 25.5, 25.6, 25.7, 25.8, 25.9, 25.10_
 
-- [ ] 22. Implement Performance, Caching, and Rate Limiting
-  - [~] 22.1 Implement caching layer and rate limiting (Amazon ElastiCache, AWS API Gateway, Amazon CloudFront)
+- [x] 22. Implement Performance, Caching, and Rate Limiting
+  - [x] 22.1 Implement caching layer and rate limiting (Amazon ElastiCache, AWS API Gateway, Amazon CloudFront)
     - Set up Amazon ElastiCache (Redis) caching: 1-hour TTL for market data, 24-hour TTL for knowledge base
     - Implement per-user rate limiting (100 AI requests/day) and per-tenant rate limiting (configurable)
     - Implement AWS API Gateway with routing, auth, and load balancing
@@ -559,8 +559,8 @@ This plan implements the KrishiMitra-AI multi-tenant SaaS platform for AI-powere
     - Test that for AI text queries under normal load, response time is under 5 seconds for at least 90% of requests
     - **Validates: Requirements 33.3**
 
-- [ ] 23. Implement Backup, Recovery, and Testing Infrastructure
-  - [~] 23.1 Implement backup and disaster recovery (Multi-AZ, cross-region)
+- [x] 23. Implement Backup, Recovery, and Testing Infrastructure
+  - [x] 23.1 Implement backup and disaster recovery (Multi-AZ, cross-region)
     - Set up automated database backups at regular intervals using Amazon RDS automated backups
     - Configure RDS Multi-AZ deployment for high availability and automatic failover
     - Enable Amazon S3 versioning on all storage buckets (knowledge base, uploads, backups)
@@ -572,7 +572,7 @@ This plan implements the KrishiMitra-AI multi-tenant SaaS platform for AI-powere
     - Validate data consistency after restoration
     - _Requirements: 39.1, 39.2, 39.3, 39.4, 39.5, 39.6, 39.7, 39.8_
 
-  - [~] 23.2 Set up CI/CD pipeline and testing infrastructure (AWS CodePipeline / GitHub Actions)
+  - [x] 23.2 Set up CI/CD pipeline and testing infrastructure (AWS CodePipeline / GitHub Actions)
     - Configure CI/CD pipeline using AWS CodePipeline or GitHub Actions: unit tests on every commit, property tests on every PR, integration tests before deployment
     - Set up security scans (weekly schedule)
     - Create synthetic test datasets for all services (farm profiles, market prices, weather, images, multilingual queries)
@@ -580,7 +580,7 @@ This plan implements the KrishiMitra-AI multi-tenant SaaS platform for AI-powere
     - Configure test execution time targets: unit <5min, property <15min, integration <30min
     - _Requirements: 40.1, 40.2, 40.3, 40.5, 40.6_
 
-  - [~] 23.3 Define Infrastructure as Code (Terraform / AWS CDK)
+  - [x] 23.3 Define Infrastructure as Code (Terraform / AWS CDK)
     - Create IaC project (Terraform or AWS CDK in TypeScript) under `packages/infra/`
     - Define Amazon RDS for PostgreSQL (Multi-AZ, pgvector extension, parameter groups, security groups)
     - Define Amazon ElastiCache (Redis) cluster with encryption at rest and in transit
@@ -596,8 +596,8 @@ This plan implements the KrishiMitra-AI multi-tenant SaaS platform for AI-powere
     - Output key resource ARNs and endpoints for use by application configuration
     - _Requirements: 33.1, 39.1, 39.5, 25.1, 40.1_
 
-- [ ] 24. Integration wiring and end-to-end flows
-  - [~] 24.1 Wire all backend services together through AWS API Gateway
+- [x] 24. Integration wiring and end-to-end flows
+  - [x] 24.1 Wire all backend services together through AWS API Gateway
     - Connect all microservices through AWS API Gateway with proper routing
     - Deploy backend services on Amazon ECS (or EKS) with container orchestration
     - Wire AI Assistant tool-calling to market data, weather, and scheme eligibility services
@@ -608,7 +608,7 @@ This plan implements the KrishiMitra-AI multi-tenant SaaS platform for AI-powere
     - Ensure all cross-service calls use circuit breakers and retry strategies
     - _Requirements: 5.7, 31.6_
 
-  - [~] 24.2 Wire frontend to backend APIs
+  - [x] 24.2 Wire frontend to backend APIs
     - Connect all frontend screens to their corresponding backend API endpoints
     - Implement API client with authentication token injection, error handling, and retry logic
     - Wire offline queue to sync service
@@ -625,7 +625,7 @@ This plan implements the KrishiMitra-AI multi-tenant SaaS platform for AI-powere
     - Test admin creates tenant → adds users → configures settings flow
     - _Requirements: 40.3_
 
-- [ ] 25. Final checkpoint - Full system integration
+- [x] 25. Final checkpoint - Full system integration
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes

@@ -1,0 +1,66 @@
+import React from 'react';
+import { render, screen, act, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { useAuth } from './useAuth';
+
+beforeEach(() => localStorage.clear());
+
+function TestComponent() {
+  const { user, isAuthenticated, login, verifyOtp, register, logout, loading, error } = useAuth();
+  return (
+    <div>
+      <span data-testid="auth">{String(isAuthenticated)}</span>
+      <span data-testid="user">{user?.phone || 'none'}</span>
+      <span data-testid="loading">{String(loading)}</span>
+      <span data-testid="error">{error || 'none'}</span>
+      <button onClick={() => login('+911234567890')}>Login</button>
+      <button onClick={() => verifyOtp('+911234567890', '1234')}>Verify</button>
+      <button onClick={() => register('+911234567890', 'Test')}>Register</button>
+      <button onClick={() => logout()}>Logout</button>
+    </div>
+  );
+}
+
+test('initial state is not authenticated', () => {
+  render(<TestComponent />);
+  expect(screen.getByTestId('auth')).toHaveTextContent('false');
+  expect(screen.getByTestId('user')).toHaveTextContent('none');
+});
+
+test('login sets loading state', async () => {
+  const user = userEvent.setup();
+  render(<TestComponent />);
+  await user.click(screen.getByText('Login'));
+  await waitFor(() => {
+    expect(screen.getByTestId('loading')).toHaveTextContent('false');
+  });
+});
+
+test('verifyOtp authenticates user', async () => {
+  const user = userEvent.setup();
+  render(<TestComponent />);
+  await user.click(screen.getByText('Verify'));
+  await waitFor(() => {
+    expect(screen.getByTestId('auth')).toHaveTextContent('true');
+    expect(screen.getByTestId('user')).toHaveTextContent('+911234567890');
+  });
+});
+
+test('register authenticates user', async () => {
+  const user = userEvent.setup();
+  render(<TestComponent />);
+  await user.click(screen.getByText('Register'));
+  await waitFor(() => {
+    expect(screen.getByTestId('auth')).toHaveTextContent('true');
+  });
+});
+
+test('logout clears user', async () => {
+  const user = userEvent.setup();
+  render(<TestComponent />);
+  await user.click(screen.getByText('Verify'));
+  await waitFor(() => expect(screen.getByTestId('auth')).toHaveTextContent('true'));
+  await user.click(screen.getByText('Logout'));
+  expect(screen.getByTestId('auth')).toHaveTextContent('false');
+  expect(screen.getByTestId('user')).toHaveTextContent('none');
+});

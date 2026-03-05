@@ -1,0 +1,66 @@
+{
+  "_comment": "IAM policy for the Admin Service (ECS task role). Grants read access to all buckets for data export, write access to backup bucket, and Secrets Manager access.",
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ReadAllBucketsForExport",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:ListBucket"
+      ],
+      "Resource": [
+        "arn:aws:s3:::krishimitra-knowledge-base",
+        "arn:aws:s3:::krishimitra-knowledge-base/*",
+        "arn:aws:s3:::krishimitra-user-uploads",
+        "arn:aws:s3:::krishimitra-user-uploads/*",
+        "arn:aws:s3:::krishimitra-market-data",
+        "arn:aws:s3:::krishimitra-market-data/*"
+      ]
+    },
+    {
+      "Sid": "WriteBackupBucket",
+      "Effect": "Allow",
+      "Action": [
+        "s3:PutObject",
+        "s3:GetObject",
+        "s3:ListBucket"
+      ],
+      "Resource": [
+        "arn:aws:s3:::krishimitra-backups",
+        "arn:aws:s3:::krishimitra-backups/*"
+      ]
+    },
+    {
+      "Sid": "ReadSecretsManagerSecrets",
+      "Effect": "Allow",
+      "Action": [
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:DescribeSecret"
+      ],
+      "Resource": [
+        "arn:aws:secretsmanager:*:*:secret:krishimitra/admin-service/*",
+        "arn:aws:secretsmanager:*:*:secret:krishimitra/db-credentials/*"
+      ]
+    },
+    {
+      "Sid": "WriteCloudWatchLogs",
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ],
+      "Resource": "arn:aws:logs:*:*:log-group:/krishimitra/admin-service:*"
+    },
+    {
+      "Sid": "XRayTracing",
+      "Effect": "Allow",
+      "Action": [
+        "xray:PutTraceSegments",
+        "xray:PutTelemetryRecords"
+      ],
+      "Resource": "*"
+    }
+  ]
+}

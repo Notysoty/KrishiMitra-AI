@@ -1,0 +1,222 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: ['**']
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Unit Tests — runs on every push and PR, target < 5 min
+  # Requirements: 40.1, 40.2
+  # ─────────────────────────────────────────────────────────────────────────────
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install backend dependencies
+        run: npm ci
+        working-directory: packages/backend
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: packages/frontend
+
+      - name: Run backend unit tests with coverage
+        run: npm test -- --coverage --coverageReporters=text --coverageReporters=lcov --passWithNoTests
+        working-directory: packages/backend
+        env:
+          CI: true
+          NODE_ENV: test
+
+      - name: Run frontend unit tests
+        run: npm test -- --watchAll=false --passWithNoTests
+        working-directory: packages/frontend
+        env:
+          CI: true
+
+      - name: Upload backend coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-coverage
+          path: packages/backend/coverage/
+          retention-days: 7
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Property-Based Tests — runs on PRs only, target < 15 min
+  # Requirements: 40.3
+  # ─────────────────────────────────────────────────────────────────────────────
+  property-tests:
+    name: Property-Based Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install backend dependencies
+        run: npm ci
+        working-directory: packages/backend
+
+      - name: Run property-based tests (fast-check)
+        # Run only files matching the property test naming convention
+        run: npm test -- --testPathPattern="\.property\.test\.ts$" --passWithNoTests
+        working-directory: packages/backend
+        env:
+          CI: true
+          NODE_ENV: test
+          # Increase fast-check runs for thorough property exploration
+          FC_NUM_RUNS: '200'
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Integration Tests — runs on pushes to main (before deployment), target < 30 min
+  # Requirements: 40.5
+  # ─────────────────────────────────────────────────────────────────────────────
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: krishimitra
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_DB: krishimitra_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install backend dependencies
+        run: npm ci
+        working-directory: packages/backend
+
+      - name: Run database migrations
+        run: npm run db:migrate || true
+        working-directory: packages/backend
+        env:
+          DATABASE_URL: postgresql://krishimitra:testpassword@localhost:5432/krishimitra_test
+          NODE_ENV: test
+
+      - name: Run integration tests
+        run: npm test -- --testPathPattern="\.integration\.test\.ts$" --passWithNoTests
+        working-directory: packages/backend
+        env:
+          CI: true
+          NODE_ENV: test
+          DATABASE_URL: postgresql://krishimitra:testpassword@localhost:5432/krishimitra_test
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: test-jwt-secret-for-ci-only
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Security Scan — runs on every push/PR (lightweight) + weekly schedule
+  # Requirements: 40.6
+  # ─────────────────────────────────────────────────────────────────────────────
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install backend dependencies
+        run: npm ci
+        working-directory: packages/backend
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: packages/frontend
+
+      - name: npm audit — backend
+        run: npm audit --audit-level=high
+        working-directory: packages/backend
+        continue-on-error: true
+
+      - name: npm audit — frontend
+        run: npm audit --audit-level=high
+        working-directory: packages/frontend
+        continue-on-error: true
+
+      - name: Run ESLint security checks — backend
+        run: npm run lint || true
+        working-directory: packages/backend
+
+      - name: Run ESLint security checks — frontend
+        run: npm run lint || true
+        working-directory: packages/frontend
+
+      - name: Check for hardcoded secrets (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true

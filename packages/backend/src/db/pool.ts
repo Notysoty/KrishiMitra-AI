@@ -1,10 +1,65 @@
-import { Pool, PoolConfig } from 'pg';
+import { Pool, PoolConfig, QueryConfig, QueryResult } from 'pg';
 import {
   SecretsManagerClient,
   GetSecretValueCommand,
 } from '@aws-sdk/client-secrets-manager';
 
 let pool: Pool | null = null;
+
+// ── Slow query logging ────────────────────────────────────────
+
+/** Threshold in milliseconds above which a query is considered slow (Requirement 33.6). */
+export const SLOW_QUERY_THRESHOLD_MS = 2_000;
+
+export interface SlowQueryLog {
+  timestamp: string;
+  query: string;
+  durationMs: number;
+}
+
+/** Callback invoked when a slow query is detected. Override in tests or for custom handling. */
+let slowQueryCallback: ((log: SlowQueryLog) => void) | null = null;
+
+export function setSlowQueryCallback(cb: ((log: SlowQueryLog) => void) | null): void {
+  slowQueryCallback = cb;
+}
+
+/**
+ * Wrap a pool query call with timing and slow-query detection.
+ * Logs a warning when the query exceeds SLOW_QUERY_THRESHOLD_MS.
+ */
+export async function timedQuery(
+  queryText: string | QueryConfig,
+  values?: unknown[],
+): Promise<QueryResult> {
+  const p = getPool();
+  const start = Date.now();
+  const result = await (values !== undefined
+    ? p.query(queryText as string, values)
+    : p.query(queryText as string | QueryConfig));
+  const durationMs = Date.now() - start;
+
+  if (durationMs > SLOW_QUERY_THRESHOLD_MS) {
+    const text = typeof queryText === 'string' ? queryText : queryText.text;
+    const log: SlowQueryLog = {
+      timestamp: new Date().toISOString(),
+      query: text,
+      durationMs,
+    };
+    console.warn(
+      JSON.stringify({
+        level: 'WARN',
+        message: 'Slow database query detected',
+        ...log,
+      }),
+    );
+    if (slowQueryCallback) {
+      slowQueryCallback(log);
+    }
+  }
+
+  return result;
+}
 
 interface DbCredentials {
   host: string;

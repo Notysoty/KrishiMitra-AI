@@ -117,7 +117,7 @@ export class MarketIntelligence {
   ): MarketRecommendationResponse {
     const distance = haversineDistance(farmLocation, market.location);
     const roundedDistance = Math.round(distance * 100) / 100;
-    const transportCost = estimateTransportCost(distance);
+    const transportCost = estimateTransportCost(roundedDistance);
     const netProfit = Math.round((market.price - transportCost) * 100) / 100;
 
     const warnings: string[] = [];

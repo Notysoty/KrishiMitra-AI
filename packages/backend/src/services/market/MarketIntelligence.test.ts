@@ -263,9 +263,10 @@ describe('MarketIntelligence', () => {
       const staleDate = new Date();
       staleDate.setDate(staleDate.getDate() - 10);
 
+      mockQuery.mockReset();
       mockQuery
-        .mockResolvedValueOnce(undefined)
-        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(undefined) // BEGIN
+        .mockResolvedValueOnce(undefined) // SET LOCAL
         .mockResolvedValueOnce({
           rows: [
             {
@@ -280,7 +281,7 @@ describe('MarketIntelligence', () => {
             },
           ],
         })
-        .mockResolvedValueOnce(undefined);
+        .mockResolvedValueOnce(undefined); // COMMIT
 
       const staleIntelligence = new MarketIntelligence();
       const result = await staleIntelligence.getRecommendations(
@@ -292,9 +293,8 @@ describe('MarketIntelligence', () => {
       const staleRec = result.recommendations.find(
         (r) => r.market_name === 'Azadpur Mandi',
       );
-      if (staleRec) {
-        expect(staleRec.confidence).toContain('Low');
-      }
+      expect(staleRec).toBeDefined();
+      expect(staleRec!.confidence).toContain('Low');
     });
   });
 });

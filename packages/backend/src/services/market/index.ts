@@ -23,3 +23,14 @@ export type {
   MarketRecommendationResponse,
   RecommendationsResult,
 } from './MarketIntelligence';
+
+export {
+  PriceForecaster,
+  calculateStdDev,
+  volatilityToConfidence,
+  simpleMovingAverage,
+} from './PriceForecaster';
+export type {
+  PriceForecastResponse,
+  DailyForecastEntry,
+} from './PriceForecaster';

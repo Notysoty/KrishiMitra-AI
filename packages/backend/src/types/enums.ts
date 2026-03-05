@@ -122,3 +122,23 @@ export enum DataQualityType {
   MISSING_DATA = 'missing_data',
   INCOMPLETE_PROFILE = 'incomplete_profile',
 }
+
+export enum ContentModerationStatus {
+  QUEUED = 'queued',
+  APPROVED = 'approved',
+  REJECTED = 'rejected',
+  OUTDATED = 'outdated',
+}
+
+export enum BroadcastStatus {
+  PENDING = 'pending',
+  SENT = 'sent',
+  FAILED = 'failed',
+}
+
+export enum MessageDeliveryStatus {
+  PENDING = 'pending',
+  DELIVERED = 'delivered',
+  VIEWED = 'viewed',
+  FAILED = 'failed',
+}

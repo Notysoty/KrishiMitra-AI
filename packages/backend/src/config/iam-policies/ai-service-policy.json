@@ -1,0 +1,48 @@
+{
+  "_comment": "IAM policy for the AI Service (ECS task role). Grants read-only access to the knowledge-base S3 bucket and Secrets Manager for API keys. No write access to data buckets.",
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ReadKnowledgeBaseS3",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:ListBucket"
+      ],
+      "Resource": [
+        "arn:aws:s3:::krishimitra-knowledge-base",
+        "arn:aws:s3:::krishimitra-knowledge-base/*"
+      ]
+    },
+    {
+      "Sid": "ReadSecretsManagerSecrets",
+      "Effect": "Allow",
+      "Action": [
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:DescribeSecret"
+      ],
+      "Resource": [
+        "arn:aws:secretsmanager:*:*:secret:krishimitra/ai-service/*"
+      ]
+    },
+    {
+      "Sid": "WriteCloudWatchLogs",
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ],
+      "Resource": "arn:aws:logs:*:*:log-group:/krishimitra/ai-service:*"
+    },
+    {
+      "Sid": "XRayTracing",
+      "Effect": "Allow",
+      "Action": [
+        "xray:PutTraceSegments",
+        "xray:PutTelemetryRecords"
+      ],
+      "Resource": "*"
+    }
+  ]
+}

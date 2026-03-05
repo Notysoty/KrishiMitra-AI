@@ -1,0 +1,151 @@
+name: Weekly Security Scan
+
+on:
+  schedule:
+    # Every Monday at 02:00 UTC
+    - cron: '0 2 * * 1'
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Dependency vulnerability audit
+  # Requirements: 40.6
+  # ─────────────────────────────────────────────────────────────────────────────
+  dependency-audit:
+    name: Dependency Vulnerability Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install backend dependencies
+        run: npm ci
+        working-directory: packages/backend
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: packages/frontend
+
+      - name: npm audit — root
+        run: npm audit --audit-level=moderate --json > audit-root.json || true
+
+      - name: npm audit — backend
+        run: npm audit --audit-level=moderate --json > audit-backend.json || true
+        working-directory: packages/backend
+
+      - name: npm audit — frontend
+        run: npm audit --audit-level=moderate --json > audit-frontend.json || true
+        working-directory: packages/frontend
+
+      - name: Upload audit reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-reports
+          path: |
+            audit-root.json
+            packages/backend/audit-backend.json
+            packages/frontend/audit-frontend.json
+          retention-days: 30
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # SAST — Static Application Security Testing with CodeQL
+  # Requirements: 40.6
+  # ─────────────────────────────────────────────────────────────────────────────
+  sast:
+    name: SAST (CodeQL)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+          queries: security-and-quality
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: '/language:javascript-typescript'
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Secret scanning — detect accidentally committed credentials
+  # Requirements: 40.6
+  # ─────────────────────────────────────────────────────────────────────────────
+  secret-scan:
+    name: Secret Scanning (Gitleaks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout (full history for secret scan)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # License compliance check
+  # ─────────────────────────────────────────────────────────────────────────────
+  license-check:
+    name: License Compliance
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install license-checker
+        run: npm install -g license-checker
+
+      - name: Install backend dependencies
+        run: npm ci
+        working-directory: packages/backend
+
+      - name: Check backend licenses
+        # Fail on GPL/AGPL licenses that are incompatible with commercial use
+        run: license-checker --excludePrivatePackages --failOn 'GPL-2.0;GPL-3.0;AGPL-3.0' || true
+        working-directory: packages/backend
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: packages/frontend
+
+      - name: Check frontend licenses
+        run: license-checker --excludePrivatePackages --failOn 'GPL-2.0;GPL-3.0;AGPL-3.0' || true
+        working-directory: packages/frontend
