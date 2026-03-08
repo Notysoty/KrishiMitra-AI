@@ -1,7 +1,10 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { I18nProvider } from '../i18n';
 import { ContentModerationPage } from './ContentModerationPage';
+
+const renderPage = () => render(<I18nProvider><ContentModerationPage /></I18nProvider>);
 
 const mockGetModerationQueue = jest.fn();
 const mockReviewModerationItem = jest.fn();
@@ -32,7 +35,7 @@ beforeEach(() => {
 describe('ContentModerationPage', () => {
   // Req 23.2: Review interface with content, sources, confidence
   it('renders moderation queue with content, sources, and confidence', async () => {
-    render(<ContentModerationPage />);
+    renderPage();
     expect(screen.getByTestId('content-moderation-page')).toBeInTheDocument();
     await waitFor(() => expect(screen.getByTestId('moderation-queue')).toBeInTheDocument());
     expect(screen.getByTestId('mod-item-mod1')).toBeInTheDocument();
@@ -43,7 +46,7 @@ describe('ContentModerationPage', () => {
 
   // Req 23.2: Approve/reject buttons
   it('shows approve and reject buttons for queued items', async () => {
-    render(<ContentModerationPage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId('approve-mod1')).toBeInTheDocument());
     expect(screen.getByTestId('reject-mod1')).toBeInTheDocument();
   });
@@ -51,7 +54,7 @@ describe('ContentModerationPage', () => {
   // Req 23.2: Approve action removes item from queue
   it('removes item from queue after approval', async () => {
     const user = userEvent.setup();
-    render(<ContentModerationPage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId('approve-mod1')).toBeInTheDocument());
     await user.click(screen.getByTestId('approve-mod1'));
     await waitFor(() => expect(screen.queryByTestId('mod-item-mod1')).not.toBeInTheDocument());
@@ -59,7 +62,7 @@ describe('ContentModerationPage', () => {
 
   // Moderation stats display
   it('displays moderation statistics', async () => {
-    render(<ContentModerationPage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId('moderation-stats')).toBeInTheDocument());
     expect(screen.getByTestId('moderation-stats')).toHaveTextContent('12');
     expect(screen.getByTestId('moderation-stats')).toHaveTextContent('85');
@@ -68,7 +71,7 @@ describe('ContentModerationPage', () => {
 
   // Status filter
   it('has status filter dropdown', async () => {
-    render(<ContentModerationPage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId('status-filter')).toBeInTheDocument());
     expect(screen.getByTestId('status-filter')).toHaveValue('queued');
   });
@@ -76,7 +79,7 @@ describe('ContentModerationPage', () => {
   it('handles API error gracefully', async () => {
     mockGetModerationQueue.mockRejectedValueOnce(new Error('Network error'));
     mockGetModerationStats.mockRejectedValueOnce(new Error('Network error'));
-    render(<ContentModerationPage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId('error-message')).toBeInTheDocument());
   });
 });

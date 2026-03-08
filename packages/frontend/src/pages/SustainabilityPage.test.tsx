@@ -1,7 +1,10 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { I18nProvider } from '../i18n';
 import { SustainabilityPage } from './SustainabilityPage';
+
+const renderPage = (props?: { farmId?: string }) => render(<I18nProvider><SustainabilityPage {...props} /></I18nProvider>);
 
 const mockGetWaterEfficiency = jest.fn();
 const mockGetInputEfficiency = jest.fn();
@@ -96,9 +99,9 @@ beforeEach(() => {
 
 describe('SustainabilityPage', () => {
   it('renders page with header and tabs', async () => {
-    render(<SustainabilityPage />);
+    renderPage();
     expect(screen.getByTestId('sustainability-page')).toBeInTheDocument();
-    expect(screen.getByText('Sustainability Dashboard')).toBeInTheDocument();
+    expect(screen.getByText(/Sustainability Dashboard/)).toBeInTheDocument();
     expect(screen.getByTestId('tab-water')).toBeInTheDocument();
     expect(screen.getByTestId('tab-input')).toBeInTheDocument();
     expect(screen.getByTestId('tab-climate')).toBeInTheDocument();
@@ -107,7 +110,7 @@ describe('SustainabilityPage', () => {
 
   // Req 13.3, 13.4, 13.7: Water efficiency with chart and rating
   it('displays water efficiency data on default tab', async () => {
-    render(<SustainabilityPage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId('water-efficiency-display')).toBeInTheDocument());
     expect(screen.getByTestId('water-rating')).toHaveTextContent('Medium Efficiency');
     expect(screen.getByTestId('water-chart')).toBeInTheDocument();
@@ -118,7 +121,7 @@ describe('SustainabilityPage', () => {
   // Req 14.3, 14.4, 14.7: Input cost/yield tracking
   it('displays input efficiency data when tab is clicked', async () => {
     const user = userEvent.setup();
-    render(<SustainabilityPage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId('tab-content')).toBeInTheDocument());
     await user.click(screen.getByTestId('tab-input'));
     await waitFor(() => expect(screen.getByTestId('input-efficiency-display')).toBeInTheDocument());
@@ -130,7 +133,7 @@ describe('SustainabilityPage', () => {
   // Req 15.1, 15.2, 15.6, 15.8: Climate risk with forecast and factors
   it('displays climate risk data with forecast and alerts', async () => {
     const user = userEvent.setup();
-    render(<SustainabilityPage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId('tab-content')).toBeInTheDocument());
     await user.click(screen.getByTestId('tab-climate'));
     await waitFor(() => expect(screen.getByTestId('climate-risk-display')).toBeInTheDocument());
@@ -144,7 +147,7 @@ describe('SustainabilityPage', () => {
   // Req 16.4: Weather alerts with actionable advice
   it('displays weather alerts with advice on climate tab', async () => {
     const user = userEvent.setup();
-    render(<SustainabilityPage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId('tab-content')).toBeInTheDocument());
     await user.click(screen.getByTestId('tab-climate'));
     await waitFor(() => expect(screen.getByTestId('weather-alerts')).toBeInTheDocument());
@@ -156,7 +159,7 @@ describe('SustainabilityPage', () => {
   it('handles unavailable weather data gracefully', async () => {
     mockGetClimateRisk.mockResolvedValueOnce({ ...mockClimateData, weather_available: false });
     const user = userEvent.setup();
-    render(<SustainabilityPage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId('tab-content')).toBeInTheDocument());
     await user.click(screen.getByTestId('tab-climate'));
     await waitFor(() => expect(screen.getByTestId('weather-unavailable')).toBeInTheDocument());
@@ -165,14 +168,14 @@ describe('SustainabilityPage', () => {
   // Error handling
   it('displays error message on API failure', async () => {
     mockGetWaterEfficiency.mockRejectedValueOnce(new Error('Network error'));
-    render(<SustainabilityPage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId('error-message')).toBeInTheDocument());
     expect(screen.getByTestId('error-message')).toHaveTextContent('Failed to load sustainability data');
   });
 
   // Passes farmId to API calls
   it('passes farmId to API calls', async () => {
-    render(<SustainabilityPage farmId="farm-123" />);
+    renderPage({ farmId: 'farm-123' });
     await waitFor(() => expect(mockGetWaterEfficiency).toHaveBeenCalledWith('farm-123'));
   });
 });

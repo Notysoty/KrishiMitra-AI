@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AuditLogPage } from './AuditLogPage';
+import { I18nProvider } from '../i18n';
 
 const mockSearchAuditLogs = jest.fn();
 const mockExportAuditLogs = jest.fn();
@@ -26,9 +27,11 @@ beforeEach(() => {
 });
 
 describe('AuditLogPage', () => {
+  const renderPage = () => render(<I18nProvider><AuditLogPage /></I18nProvider>);
+
   // Req 28.5: Audit log search and filtering
   it('renders audit log table with entries', async () => {
-    render(<AuditLogPage />);
+    renderPage();
     expect(screen.getByTestId('audit-log-page')).toBeInTheDocument();
     await waitFor(() => expect(screen.getByTestId('audit-table')).toBeInTheDocument());
     expect(screen.getByTestId('log-row-al1')).toBeInTheDocument();
@@ -37,7 +40,7 @@ describe('AuditLogPage', () => {
 
   // Req 28.5: Search filters
   it('has search and filter controls', async () => {
-    render(<AuditLogPage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId('audit-filters')).toBeInTheDocument());
     expect(screen.getByTestId('filter-action')).toBeInTheDocument();
     expect(screen.getByTestId('filter-user-id')).toBeInTheDocument();
@@ -49,7 +52,7 @@ describe('AuditLogPage', () => {
 
   // Req 28.5: Suspicious activity flagging
   it('highlights suspicious entries', async () => {
-    render(<AuditLogPage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId('log-row-al2')).toBeInTheDocument());
     expect(screen.getByTestId('suspicious-al2')).toBeInTheDocument();
     expect(screen.getByTestId('sensitive-al2')).toBeInTheDocument();
@@ -57,20 +60,20 @@ describe('AuditLogPage', () => {
 
   // Req 28.5: CSV export
   it('has export CSV button', async () => {
-    render(<AuditLogPage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId('export-csv-btn')).toBeInTheDocument());
   });
 
   // Log count display
   it('shows log count', async () => {
-    render(<AuditLogPage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId('log-count')).toBeInTheDocument());
     expect(screen.getByTestId('log-count')).toHaveTextContent('Showing 2 of 2');
   });
 
   it('handles API error gracefully', async () => {
     mockSearchAuditLogs.mockRejectedValueOnce(new Error('Network error'));
-    render(<AuditLogPage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId('error-message')).toBeInTheDocument());
   });
 });

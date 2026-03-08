@@ -1,12 +1,16 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
+import { I18nProvider } from '../i18n';
 import { OnboardingPage } from './OnboardingPage';
+
+const renderPage = () => render(<MemoryRouter><I18nProvider><OnboardingPage /></I18nProvider></MemoryRouter>);
 
 beforeEach(() => localStorage.clear());
 
 test('renders first step with welcome message', () => {
-  render(<OnboardingPage />);
+  renderPage();
   expect(screen.getByTestId('onboarding-title')).toHaveTextContent('Welcome to KrishiMitra!');
   expect(screen.getByText('Step 1 of 5')).toBeInTheDocument();
   expect(screen.getByTestId('onboarding-next')).toBeInTheDocument();
@@ -15,7 +19,7 @@ test('renders first step with welcome message', () => {
 
 test('navigates to next step', async () => {
   const user = userEvent.setup();
-  render(<OnboardingPage />);
+  renderPage();
   await user.click(screen.getByTestId('onboarding-next'));
   expect(screen.getByTestId('onboarding-title')).toHaveTextContent('Farm Profile');
   expect(screen.getByText('Step 2 of 5')).toBeInTheDocument();
@@ -23,7 +27,7 @@ test('navigates to next step', async () => {
 
 test('navigates back', async () => {
   const user = userEvent.setup();
-  render(<OnboardingPage />);
+  renderPage();
   await user.click(screen.getByTestId('onboarding-next'));
   expect(screen.getByTestId('onboarding-title')).toHaveTextContent('Farm Profile');
   await user.click(screen.getByTestId('onboarding-back'));
@@ -32,7 +36,7 @@ test('navigates back', async () => {
 
 test('shows all steps in sequence', async () => {
   const user = userEvent.setup();
-  render(<OnboardingPage />);
+  renderPage();
   expect(screen.getByTestId('onboarding-title')).toHaveTextContent('Welcome to KrishiMitra!');
   await user.click(screen.getByTestId('onboarding-next'));
   expect(screen.getByTestId('onboarding-title')).toHaveTextContent('Farm Profile');
@@ -46,7 +50,7 @@ test('shows all steps in sequence', async () => {
 
 test('shows Get Started button on last step', async () => {
   const user = userEvent.setup();
-  render(<OnboardingPage />);
+  renderPage();
   // Navigate to last step
   for (let i = 0; i < 4; i++) {
     await user.click(screen.getByTestId('onboarding-next'));
@@ -58,7 +62,7 @@ test('shows Get Started button on last step', async () => {
 
 test('completes onboarding and stores in localStorage', async () => {
   const user = userEvent.setup();
-  render(<OnboardingPage />);
+  renderPage();
   for (let i = 0; i < 4; i++) {
     await user.click(screen.getByTestId('onboarding-next'));
   }
@@ -68,12 +72,12 @@ test('completes onboarding and stores in localStorage', async () => {
 
 test('skip stores completion in localStorage', async () => {
   const user = userEvent.setup();
-  render(<OnboardingPage />);
+  renderPage();
   await user.click(screen.getByTestId('onboarding-skip'));
   expect(localStorage.getItem('krishimitra_onboarding_complete')).toBe('true');
 });
 
 test('back button not shown on first step', () => {
-  render(<OnboardingPage />);
+  renderPage();
   expect(screen.queryByTestId('onboarding-back')).not.toBeInTheDocument();
 });

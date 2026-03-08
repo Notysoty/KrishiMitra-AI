@@ -50,6 +50,7 @@ jest.mock('./services/alertClient', () => ({
 // Mock backgroundSync to avoid side effects
 jest.mock('./services/backgroundSync', () => ({
   startBackgroundSync: jest.fn().mockReturnValue(() => {}),
+  setupPushNotifications: jest.fn().mockResolvedValue(undefined),
 }));
 
 describe('App', () => {

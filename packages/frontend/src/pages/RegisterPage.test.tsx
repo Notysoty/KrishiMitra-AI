@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
 import { I18nProvider } from '../i18n';
 import { RegisterPage } from './RegisterPage';
 
@@ -8,9 +9,11 @@ beforeEach(() => localStorage.clear());
 
 function renderRegisterPage() {
   return render(
-    <I18nProvider>
-      <RegisterPage />
-    </I18nProvider>
+    <MemoryRouter>
+      <I18nProvider>
+        <RegisterPage />
+      </I18nProvider>
+    </MemoryRouter>
   );
 }
 

@@ -62,7 +62,7 @@ export interface ChatMessageData {
 export const ChatMessage: React.FC<{ message: ChatMessageData }> = ({ message }) => {
   if (message.safetyRefusal) {
     return (
-      <div className="chat-bubble refusal" data-testid="safety-refusal">
+      <div className="chat-bubble refusal" data-testid="safety-refusal" style={{ backgroundColor: 'rgb(255, 235, 238)' }}>
         <span role="img" aria-label="warning" style={{ marginRight: '6px' }}>⚠️</span>
         <span>{message.safetyRefusal}</span>
       </div>
@@ -71,7 +71,7 @@ export const ChatMessage: React.FC<{ message: ChatMessageData }> = ({ message })
 
   if (message.role === 'user') {
     return (
-      <div className="chat-bubble user" data-testid="user-message">
+      <div className="chat-bubble user" data-testid="user-message" style={{ backgroundColor: 'rgb(220, 248, 198)' }}>
         {message.imageUrl && (
           <img src={message.imageUrl} alt="uploaded" style={{ maxWidth: '200px', borderRadius: '8px', marginBottom: '4px', display: 'block' }} />
         )}
@@ -80,9 +80,36 @@ export const ChatMessage: React.FC<{ message: ChatMessageData }> = ({ message })
     );
   }
 
+  const confidencePct = message.confidence != null ? Math.round(message.confidence * 100) : null;
+  let confidenceLabel = '';
+  let confidenceColor = '';
+  if (confidencePct != null) {
+    if (message.confidence! > 0.7) { confidenceLabel = 'High'; confidenceColor = 'rgb(46, 125, 50)'; }
+    else if (message.confidence! >= 0.5) { confidenceLabel = 'Medium'; confidenceColor = 'rgb(249, 168, 37)'; }
+    else { confidenceLabel = 'Low'; confidenceColor = 'rgb(198, 40, 40)'; }
+  }
+
   return (
     <div className="chat-bubble ai" data-testid="ai-message">
       <div>{renderMarkdown(message.text)}</div>
+
+      {confidencePct != null && (
+        <div data-testid="confidence-badge" style={{ display: 'inline-block', backgroundColor: confidenceColor, color: '#fff', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', marginTop: '4px' }}>
+          {confidenceLabel} ({confidencePct}%)
+        </div>
+      )}
+
+      {message.confidence != null && message.confidence < 0.7 && (
+        <div data-testid="uncertainty-message" style={{ fontSize: '0.8rem', color: '#b45309', marginTop: '4px' }}>
+          I am uncertain about this answer. Please consult a local agricultural expert.
+        </div>
+      )}
+
+      {message.disclaimer && (
+        <div data-testid="disclaimer" style={{ fontStyle: 'italic', fontSize: '0.8rem', color: '#666', marginTop: '4px' }}>
+          {message.disclaimer}
+        </div>
+      )}
 
       {message.citations && message.citations.length > 0 && (
         <div data-testid="citations" style={{ marginTop: '6px', fontSize: '0.75rem' }}>

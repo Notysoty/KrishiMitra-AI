@@ -1,7 +1,9 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
 import { ChatPage } from './ChatPage';
+import { I18nProvider } from '../i18n';
 
 const mockSendMessage = jest.fn();
 const mockClassifyImage = jest.fn();
@@ -34,8 +36,10 @@ beforeEach(() => {
 });
 
 describe('ChatPage', () => {
+  const renderPage = () => render(<MemoryRouter><I18nProvider><ChatPage /></I18nProvider></MemoryRouter>);
+
   it('renders chat interface elements', () => {
-    render(<ChatPage />);
+    renderPage();
     expect(screen.getByTestId('chat-page')).toBeInTheDocument();
     expect(screen.getByTestId('chat-input')).toBeInTheDocument();
     expect(screen.getByTestId('send-btn')).toBeInTheDocument();
@@ -44,7 +48,7 @@ describe('ChatPage', () => {
 
   it('sends a message and displays AI response', async () => {
     const user = userEvent.setup();
-    render(<ChatPage />);
+    renderPage();
 
     await user.type(screen.getByTestId('chat-input'), 'What fertilizer for rice?');
     await user.click(screen.getByTestId('send-btn'));
@@ -64,7 +68,7 @@ describe('ChatPage', () => {
 
   it('sends message on Enter key', async () => {
     const user = userEvent.setup();
-    render(<ChatPage />);
+    renderPage();
 
     await user.type(screen.getByTestId('chat-input'), 'Hello{enter}');
 
@@ -75,7 +79,7 @@ describe('ChatPage', () => {
 
   it('does not send empty messages', async () => {
     const user = userEvent.setup();
-    render(<ChatPage />);
+    renderPage();
 
     await user.click(screen.getByTestId('send-btn'));
     expect(screen.queryByTestId('user-message')).not.toBeInTheDocument();
@@ -91,7 +95,7 @@ describe('ChatPage', () => {
     });
 
     const user = userEvent.setup();
-    render(<ChatPage />);
+    renderPage();
 
     await user.type(screen.getByTestId('chat-input'), 'unsafe query');
     await user.click(screen.getByTestId('send-btn'));
@@ -103,7 +107,7 @@ describe('ChatPage', () => {
 
   it('toggles image upload panel', async () => {
     const user = userEvent.setup();
-    render(<ChatPage />);
+    renderPage();
 
     expect(screen.queryByTestId('image-upload-panel')).not.toBeInTheDocument();
     await user.click(screen.getByTestId('image-upload-toggle'));
@@ -113,7 +117,7 @@ describe('ChatPage', () => {
   });
 
   it('has voice input button', () => {
-    render(<ChatPage />);
+    renderPage();
     expect(screen.getByTestId('voice-input-btn')).toBeInTheDocument();
   });
 
@@ -121,20 +125,20 @@ describe('ChatPage', () => {
     mockSendMessage.mockRejectedValueOnce(new Error('Network error'));
 
     const user = userEvent.setup();
-    render(<ChatPage />);
+    renderPage();
 
     await user.type(screen.getByTestId('chat-input'), 'test');
     await user.click(screen.getByTestId('send-btn'));
 
     await waitFor(() => {
-      expect(screen.getByText(/something went wrong/i)).toBeInTheDocument();
+      expect(screen.getByText(/could not reach the assistant/i)).toBeInTheDocument();
     });
   });
 
   // Req 6.2: TTS audio playback button for AI responses
   it('shows listen button for AI responses', async () => {
     const user = userEvent.setup();
-    render(<ChatPage />);
+    renderPage();
 
     await user.type(screen.getByTestId('chat-input'), 'Hello');
     await user.click(screen.getByTestId('send-btn'));

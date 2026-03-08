@@ -67,7 +67,7 @@ function AppShell() {
   const { t } = useTranslation();
 
   const MAIN_NAV = [
-    { path: '/dashboard', label: 'Dashboard', icon: '🏠' },
+    { path: '/dashboard', label: t('navDashboard'), icon: '🏠' },
     { path: '/chat', label: t('navChat'), icon: '💬' },
     { path: '/farm-profile', label: t('navFarm'), icon: '🏡' },
     { path: '/market', label: t('market'), icon: '📊' },

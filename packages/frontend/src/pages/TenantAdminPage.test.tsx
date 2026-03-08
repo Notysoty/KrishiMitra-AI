@@ -1,7 +1,10 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { I18nProvider } from '../i18n';
 import { TenantAdminPage } from './TenantAdminPage';
+
+const renderPage = () => render(<I18nProvider><TenantAdminPage /></I18nProvider>);
 
 const mockGetBranding = jest.fn();
 const mockUpdateBranding = jest.fn();
@@ -61,7 +64,7 @@ beforeEach(() => {
 describe('TenantAdminPage', () => {
   // Req 21.1: Branding configuration
   it('renders branding tab with config form', async () => {
-    render(<TenantAdminPage />);
+    renderPage();
     expect(screen.getByTestId('tenant-admin-page')).toBeInTheDocument();
     await waitFor(() => expect(screen.getByTestId('branding-section')).toBeInTheDocument());
     expect(screen.getByTestId('branding-org-name')).toHaveValue('AgriCoop');
@@ -71,7 +74,7 @@ describe('TenantAdminPage', () => {
   // Req 21.2: User management
   it('displays user management with add/remove', async () => {
     const user = userEvent.setup();
-    render(<TenantAdminPage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId('branding-section')).toBeInTheDocument());
     await user.click(screen.getByTestId('tab-users'));
     await waitFor(() => expect(screen.getByTestId('users-section')).toBeInTheDocument());
@@ -83,7 +86,7 @@ describe('TenantAdminPage', () => {
   // Req 21.7: Bulk CSV import
   it('shows bulk import section on users tab', async () => {
     const user = userEvent.setup();
-    render(<TenantAdminPage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId('branding-section')).toBeInTheDocument());
     await user.click(screen.getByTestId('tab-users'));
     await waitFor(() => expect(screen.getByTestId('csv-file-input')).toBeInTheDocument());
@@ -93,7 +96,7 @@ describe('TenantAdminPage', () => {
   // Req 21.6: Usage analytics
   it('displays usage analytics with stats', async () => {
     const user = userEvent.setup();
-    render(<TenantAdminPage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId('branding-section')).toBeInTheDocument());
     await user.click(screen.getByTestId('tab-analytics'));
     await waitFor(() => expect(screen.getByTestId('analytics-section')).toBeInTheDocument());
@@ -105,7 +108,7 @@ describe('TenantAdminPage', () => {
   // Req 21.1: Content approval
   it('displays content approval with approve/reject', async () => {
     const user = userEvent.setup();
-    render(<TenantAdminPage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId('branding-section')).toBeInTheDocument());
     // Use getAllByTestId since 'tab-content' also exists as a wrapper div
     const contentTab = screen.getByRole('button', { name: 'Content' });
@@ -118,7 +121,7 @@ describe('TenantAdminPage', () => {
 
   it('handles API error gracefully', async () => {
     mockGetBranding.mockRejectedValueOnce(new Error('Network error'));
-    render(<TenantAdminPage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId('error-message')).toBeInTheDocument());
     expect(screen.getByTestId('error-message')).toHaveTextContent('Failed to load data');
   });

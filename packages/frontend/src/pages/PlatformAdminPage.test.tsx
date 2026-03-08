@@ -1,7 +1,10 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { I18nProvider } from '../i18n';
 import { PlatformAdminPage } from './PlatformAdminPage';
+
+const renderPage = () => render(<I18nProvider><PlatformAdminPage /></I18nProvider>);
 
 const mockGetTenantDashboard = jest.fn();
 const mockCreateTenant = jest.fn();
@@ -56,7 +59,7 @@ beforeEach(() => {
 describe('PlatformAdminPage', () => {
   // Req 22.1: Tenant management
   it('renders tenant management dashboard', async () => {
-    render(<PlatformAdminPage />);
+    renderPage();
     expect(screen.getByTestId('platform-admin-page')).toBeInTheDocument();
     await waitFor(() => expect(screen.getByTestId('tenants-section')).toBeInTheDocument());
     expect(screen.getByTestId('tenants-table')).toBeInTheDocument();
@@ -66,7 +69,7 @@ describe('PlatformAdminPage', () => {
 
   // Req 22.2: Tenant status display
   it('shows tenant status and suspend button for active tenants', async () => {
-    render(<PlatformAdminPage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId('tenant-row-t1')).toBeInTheDocument());
     expect(screen.getByTestId('suspend-t1')).toBeInTheDocument();
     // Suspended tenant should not have suspend button
@@ -76,7 +79,7 @@ describe('PlatformAdminPage', () => {
   // Req 22.4: Global AI config
   it('displays AI configuration form', async () => {
     const user = userEvent.setup();
-    render(<PlatformAdminPage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId('tenants-section')).toBeInTheDocument());
     await user.click(screen.getByTestId('tab-config'));
     await waitFor(() => expect(screen.getByTestId('config-section')).toBeInTheDocument());
@@ -88,7 +91,7 @@ describe('PlatformAdminPage', () => {
   // Req 22.2: Cross-tenant analytics
   it('displays cross-tenant analytics', async () => {
     const user = userEvent.setup();
-    render(<PlatformAdminPage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId('tenants-section')).toBeInTheDocument());
     await user.click(screen.getByTestId('tab-analytics'));
     await waitFor(() => expect(screen.getByTestId('cross-analytics-section')).toBeInTheDocument());
@@ -100,18 +103,18 @@ describe('PlatformAdminPage', () => {
   // Req 22.8: Feature flags
   it('displays feature flags with toggle', async () => {
     const user = userEvent.setup();
-    render(<PlatformAdminPage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId('tenants-section')).toBeInTheDocument());
     await user.click(screen.getByTestId('tab-flags'));
     await waitFor(() => expect(screen.getByTestId('flag-voice_input')).toBeInTheDocument());
-    expect(screen.getByTestId('toggle-voice_input')).toHaveTextContent('Enabled');
-    expect(screen.getByTestId('toggle-sustainability_dashboard')).toHaveTextContent('Disabled');
+    expect(screen.getByTestId('toggle-voice_input')).toHaveAttribute('aria-label', 'Enabled');
+    expect(screen.getByTestId('toggle-sustainability_dashboard')).toHaveAttribute('aria-label', 'Disabled');
   });
 
   // Req 22.8: Maintenance scheduling
   it('displays maintenance scheduling', async () => {
     const user = userEvent.setup();
-    render(<PlatformAdminPage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId('tenants-section')).toBeInTheDocument());
     await user.click(screen.getByTestId('tab-maintenance'));
     await waitFor(() => expect(screen.getByTestId('maintenance-section')).toBeInTheDocument());
@@ -121,7 +124,7 @@ describe('PlatformAdminPage', () => {
 
   it('handles API error gracefully', async () => {
     mockGetTenantDashboard.mockRejectedValueOnce(new Error('Network error'));
-    render(<PlatformAdminPage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId('error-message')).toBeInTheDocument());
   });
 });

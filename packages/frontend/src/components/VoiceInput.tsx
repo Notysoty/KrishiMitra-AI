@@ -63,6 +63,7 @@ export const VoiceInput: React.FC<VoiceInputProps> = ({ onTranscript, onVoiceCom
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const failCountRef = useRef(0);
   const nativeSpeechSupported = getSpeechRecognition() !== null;
 
   const handleTranscript = useCallback((transcript: string) => {
@@ -124,8 +125,10 @@ export const VoiceInput: React.FC<VoiceInputProps> = ({ onTranscript, onVoiceCom
     recognition.onend = () => setRecording(false);
     recognition.onerror = () => {
       setRecording(false);
-      // Fall back to MediaRecorder on Web Speech failure
-      startMediaRecorder();
+      failCountRef.current += 1;
+      if (failCountRef.current >= 2) {
+        setShowFallback(true);
+      }
     };
 
     recognitionRef.current = recognition;
@@ -165,7 +168,7 @@ export const VoiceInput: React.FC<VoiceInputProps> = ({ onTranscript, onVoiceCom
       </button>
       {showFallback && (
         <div data-testid="voice-fallback" className="alert-box alert-warning" style={{ marginTop: '4px', fontSize: '0.75rem' }}>
-          Voice input failed. Please type your message.
+          Voice input failed. Please type your message instead.
           <button onClick={() => setShowFallback(false)} className="btn btn-ghost btn-sm" style={{ marginLeft: '8px', textDecoration: 'underline' }} data-testid="dismiss-fallback">
             Dismiss
           </button>

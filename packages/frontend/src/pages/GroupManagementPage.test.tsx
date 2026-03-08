@@ -1,7 +1,10 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { I18nProvider } from '../i18n';
 import { GroupManagementPage } from './GroupManagementPage';
+
+const renderPage = () => render(<I18nProvider><GroupManagementPage /></I18nProvider>);
 
 const mockListGroups = jest.fn();
 const mockCreateGroup = jest.fn();
@@ -50,7 +53,7 @@ beforeEach(() => {
 describe('GroupManagementPage', () => {
   // Req 24.1: Create groups
   it('renders group list and create form', async () => {
-    render(<GroupManagementPage />);
+    renderPage();
     expect(screen.getByTestId('group-management-page')).toBeInTheDocument();
     await waitFor(() => expect(screen.getByTestId('group-g1')).toBeInTheDocument());
     expect(screen.getByTestId('group-g2')).toBeInTheDocument();
@@ -60,7 +63,7 @@ describe('GroupManagementPage', () => {
   // Req 24.1, 24.2: Select group shows members and broadcast
   it('shows group details with members when selected', async () => {
     const user = userEvent.setup();
-    render(<GroupManagementPage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId('group-g1')).toBeInTheDocument());
     await user.click(screen.getByTestId('group-g1'));
     await waitFor(() => expect(screen.getByTestId('group-details')).toBeInTheDocument());
@@ -72,7 +75,7 @@ describe('GroupManagementPage', () => {
   // Req 24.4: Group analytics
   it('shows group analytics when group is selected', async () => {
     const user = userEvent.setup();
-    render(<GroupManagementPage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId('group-g1')).toBeInTheDocument());
     await user.click(screen.getByTestId('group-g1'));
     await waitFor(() => expect(screen.getByTestId('group-analytics')).toBeInTheDocument());
@@ -83,7 +86,7 @@ describe('GroupManagementPage', () => {
   // Req 24.2: Broadcast message with tracking
   it('sends broadcast and shows tracking', async () => {
     const user = userEvent.setup();
-    render(<GroupManagementPage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId('group-g1')).toBeInTheDocument());
     await user.click(screen.getByTestId('group-g1'));
     await waitFor(() => expect(screen.getByTestId('broadcast-input')).toBeInTheDocument());
@@ -95,7 +98,7 @@ describe('GroupManagementPage', () => {
 
   it('handles API error gracefully', async () => {
     mockListGroups.mockRejectedValueOnce(new Error('Network error'));
-    render(<GroupManagementPage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId('error-message')).toBeInTheDocument());
   });
 });

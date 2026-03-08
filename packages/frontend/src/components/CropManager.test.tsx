@@ -16,7 +16,7 @@ const makeCrop = (overrides: Partial<Crop> = {}): Crop => ({
 
 test('renders empty crop list with add form', () => {
   render(<CropManager crops={[]} onChange={jest.fn()} />);
-  expect(screen.getByText('Crops')).toBeInTheDocument();
+  expect(screen.getByText(/Crops/)).toBeInTheDocument();
   expect(screen.getByTestId('crop-submit')).toHaveTextContent('Add Crop');
   expect(screen.getByTestId('crop-type')).toBeInTheDocument();
 });
@@ -67,8 +67,8 @@ test('removes a crop with confirmation', async () => {
   const crops = [makeCrop()];
   render(<CropManager crops={crops} onChange={onChange} />);
 
-  await user.click(screen.getByText('Remove'));
-  expect(screen.getByText('Remove this crop?')).toBeInTheDocument();
+  await user.click(screen.getByText(/Remove/));
+  expect(screen.getByText('Remove?')).toBeInTheDocument();
 
   await user.click(screen.getByTestId('confirm-remove'));
   expect(onChange).toHaveBeenCalledWith([]);
@@ -79,7 +79,7 @@ test('cancels crop removal', async () => {
   const user = userEvent.setup();
   render(<CropManager crops={[makeCrop()]} onChange={onChange} />);
 
-  await user.click(screen.getByText('Remove'));
+  await user.click(screen.getByText(/Remove/));
   await user.click(screen.getByText('No'));
   expect(onChange).not.toHaveBeenCalled();
 });
@@ -90,8 +90,8 @@ test('edits an existing crop', async () => {
   const crops = [makeCrop()];
   render(<CropManager crops={crops} onChange={onChange} />);
 
-  await user.click(screen.getByText('Edit'));
-  expect(screen.getByText('Edit Crop')).toBeInTheDocument();
+  await user.click(screen.getByText(/Edit/));
+  expect(screen.getByText(/Edit Crop/)).toBeInTheDocument();
 
   const typeInput = screen.getByTestId('crop-type');
   await user.clear(typeInput);

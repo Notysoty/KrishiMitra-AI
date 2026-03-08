@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { I18nProvider } from '../i18n';
 import { AnalyticsPage } from './AnalyticsPage';
 
 const mockGetAnalyticsReport = jest.fn();
@@ -40,9 +41,11 @@ beforeEach(() => {
 });
 
 describe('AnalyticsPage', () => {
+  const renderPage = () => render(<I18nProvider><AnalyticsPage /></I18nProvider>);
+
   // Req 37.1: User engagement metrics
   it('renders analytics with daily active users', async () => {
-    render(<AnalyticsPage />);
+    renderPage();
     expect(screen.getByTestId('analytics-page')).toBeInTheDocument();
     await waitFor(() => expect(screen.getByTestId('report-content')).toBeInTheDocument());
     expect(screen.getByTestId('dau-section')).toBeInTheDocument();
@@ -50,7 +53,7 @@ describe('AnalyticsPage', () => {
 
   // Req 37.2: AI interaction analytics
   it('displays AI interaction analytics', async () => {
-    render(<AnalyticsPage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId('ai-interactions-section')).toBeInTheDocument());
     expect(screen.getByTestId('ai-interactions-section')).toHaveTextContent('450');
     expect(screen.getByTestId('ai-interactions-section')).toHaveTextContent('88%');
@@ -58,7 +61,7 @@ describe('AnalyticsPage', () => {
 
   // Req 37.1: Feature adoption rates
   it('displays feature adoption rates', async () => {
-    render(<AnalyticsPage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId('feature-adoption-section')).toBeInTheDocument());
     expect(screen.getByTestId('feature-adoption-section')).toHaveTextContent('AI Chat');
     expect(screen.getByTestId('feature-adoption-section')).toHaveTextContent('85%');
@@ -66,14 +69,14 @@ describe('AnalyticsPage', () => {
 
   // Req 37.3: PDF/CSV export
   it('has PDF and CSV export buttons', async () => {
-    render(<AnalyticsPage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId('export-pdf-btn')).toBeInTheDocument());
     expect(screen.getByTestId('export-csv-btn')).toBeInTheDocument();
   });
 
   // Farmer outcomes
   it('displays farmer outcomes with change percentages', async () => {
-    render(<AnalyticsPage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId('farmer-outcomes-section')).toBeInTheDocument());
     expect(screen.getByTestId('farmer-outcomes-section')).toHaveTextContent('Avg Yield');
     expect(screen.getByTestId('farmer-outcomes-section')).toHaveTextContent('12%');
@@ -81,14 +84,14 @@ describe('AnalyticsPage', () => {
 
   // Period selector
   it('has period selector', async () => {
-    render(<AnalyticsPage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId('period-select')).toBeInTheDocument());
     expect(screen.getByTestId('period-select')).toHaveValue('7d');
   });
 
   it('handles API error gracefully', async () => {
     mockGetAnalyticsReport.mockRejectedValueOnce(new Error('Network error'));
-    render(<AnalyticsPage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId('error-message')).toBeInTheDocument());
   });
 });

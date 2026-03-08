@@ -1,7 +1,10 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { I18nProvider } from '../i18n';
 import { MarketIntelligencePage } from './MarketIntelligencePage';
+
+const renderPage = () => render(<I18nProvider><MarketIntelligencePage /></I18nProvider>);
 
 const mockGetMarketPrices = jest.fn();
 const mockGetMarketRecommendations = jest.fn();
@@ -66,9 +69,9 @@ beforeEach(() => {
 
 describe('MarketIntelligencePage', () => {
   it('renders page with header and tabs', async () => {
-    render(<MarketIntelligencePage />);
+    renderPage();
     expect(screen.getByTestId('market-intelligence-page')).toBeInTheDocument();
-    expect(screen.getByText('Market Intelligence')).toBeInTheDocument();
+    expect(screen.getByText(/Market Intelligence/)).toBeInTheDocument();
     expect(screen.getByTestId('tab-prices')).toBeInTheDocument();
     expect(screen.getByTestId('tab-recommendations')).toBeInTheDocument();
     expect(screen.getByTestId('tab-forecast')).toBeInTheDocument();
@@ -78,7 +81,7 @@ describe('MarketIntelligencePage', () => {
 
   // Req 9.1: Display historical market prices
   it('displays market prices with source labels and volatility', async () => {
-    render(<MarketIntelligencePage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId('market-price-chart')).toBeInTheDocument());
     expect(screen.getByTestId('last-updated')).toBeInTheDocument();
     expect(screen.getByTestId('price-comparison')).toBeInTheDocument();
@@ -88,7 +91,7 @@ describe('MarketIntelligencePage', () => {
   it('shows stale data warning when data is older than 7 days', async () => {
     const staleDate = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString();
     mockGetMarketPrices.mockResolvedValueOnce({ prices: mockPrices, last_updated: staleDate });
-    render(<MarketIntelligencePage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId('stale-data-warning')).toBeInTheDocument());
     expect(screen.getByTestId('stale-data-warning')).toHaveTextContent('Data may be outdated');
   });
@@ -96,7 +99,7 @@ describe('MarketIntelligencePage', () => {
   // Req 10.1, 10.3, 10.4: Market recommendations with explanations and net profit
   it('displays market recommendations with explanations and net profit', async () => {
     const user = userEvent.setup();
-    render(<MarketIntelligencePage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId('tab-content')).toBeInTheDocument());
     await user.click(screen.getByTestId('tab-recommendations'));
     await waitFor(() => expect(screen.getByTestId('market-recommendations')).toBeInTheDocument());
@@ -109,7 +112,7 @@ describe('MarketIntelligencePage', () => {
   // Req 10.5: Distance warning for >100km
   it('shows distance warning for markets over 100km', async () => {
     const user = userEvent.setup();
-    render(<MarketIntelligencePage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId('tab-content')).toBeInTheDocument());
     await user.click(screen.getByTestId('tab-recommendations'));
     await waitFor(() => expect(screen.getByTestId('distance-warning-1')).toBeInTheDocument());
@@ -119,7 +122,7 @@ describe('MarketIntelligencePage', () => {
   // Req 11.1, 11.2, 11.3, 11.5: Price forecast with confidence intervals
   it('displays price forecast with confidence interval and methodology', async () => {
     const user = userEvent.setup();
-    render(<MarketIntelligencePage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId('tab-content')).toBeInTheDocument());
     await user.click(screen.getByTestId('tab-forecast'));
     await waitFor(() => expect(screen.getByTestId('price-forecast')).toBeInTheDocument());
@@ -134,7 +137,7 @@ describe('MarketIntelligencePage', () => {
   it('shows low confidence warning for forecast', async () => {
     mockGetPriceForecast.mockResolvedValueOnce({ ...mockForecast, confidence_level: 'low' });
     const user = userEvent.setup();
-    render(<MarketIntelligencePage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId('tab-content')).toBeInTheDocument());
     await user.click(screen.getByTestId('tab-forecast'));
     await waitFor(() => expect(screen.getByTestId('low-confidence-warning')).toBeInTheDocument());
@@ -144,7 +147,7 @@ describe('MarketIntelligencePage', () => {
   // Req 12.2, 12.4: Alert configuration and notifications
   it('displays alerts tab with notifications and alert config', async () => {
     const user = userEvent.setup();
-    render(<MarketIntelligencePage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId('tab-content')).toBeInTheDocument());
     await user.click(screen.getByTestId('tab-alerts'));
     await waitFor(() => expect(screen.getByTestId('alert-notifications')).toBeInTheDocument());
@@ -156,7 +159,7 @@ describe('MarketIntelligencePage', () => {
   // Req 12.3: Create custom price alert
   it('creates a new price alert', async () => {
     const user = userEvent.setup();
-    render(<MarketIntelligencePage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId('tab-content')).toBeInTheDocument());
     await user.click(screen.getByTestId('tab-alerts'));
     await waitFor(() => expect(screen.getByTestId('alert-form')).toBeInTheDocument());
@@ -172,7 +175,7 @@ describe('MarketIntelligencePage', () => {
   // Crop selector changes data
   it('reloads data when crop is changed', async () => {
     const user = userEvent.setup();
-    render(<MarketIntelligencePage />);
+    renderPage();
     await waitFor(() => expect(mockGetMarketPrices).toHaveBeenCalledWith('Tomato'));
     await user.selectOptions(screen.getByTestId('crop-selector'), 'Rice');
     await waitFor(() => expect(mockGetMarketPrices).toHaveBeenCalledWith('Rice'));
@@ -181,7 +184,7 @@ describe('MarketIntelligencePage', () => {
   // Error handling
   it('displays error message on API failure', async () => {
     mockGetMarketPrices.mockRejectedValueOnce(new Error('Network error'));
-    render(<MarketIntelligencePage />);
+    renderPage();
     await waitFor(() => expect(screen.getByTestId('error-message')).toBeInTheDocument());
     expect(screen.getByTestId('error-message')).toHaveTextContent('Failed to load data');
   });
