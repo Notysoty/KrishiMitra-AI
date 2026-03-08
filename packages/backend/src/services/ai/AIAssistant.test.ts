@@ -56,8 +56,8 @@ class StubRAGSystem extends RAGSystem {
 // ── AIAssistant.calculateConfidence ─────────────────────────────
 
 describe('AIAssistant.calculateConfidence', () => {
-  it('should return 0.3 when no documents are found', () => {
-    expect(AIAssistant.calculateConfidence([])).toBe(0.3);
+  it('should return 0.65 when no documents are found (general knowledge)', () => {
+    expect(AIAssistant.calculateConfidence([])).toBe(0.65);
   });
 
   it('should return base + 0.2 for 1 document', () => {
@@ -227,15 +227,15 @@ describe('AIAssistant.processQuery', () => {
     expect(result.confidence).toBe(0);
   });
 
-  it('should return low confidence message when no documents found', async () => {
+  it('should return general-knowledge confidence when no documents found', async () => {
     const emptyRag = new StubRAGSystem([]);
     const a = new AIAssistant(mockLlm, emptyRag, new SafetyGuardrail());
 
     const result = await a.processQuery('Tell me about exotic alien crops', makeContext());
 
-    // confidence = 0.3 (no docs) → below 0.5 → refuse
-    expect(result.confidence).toBe(0.3);
-    expect(result.text).toContain("don't have enough information");
+    // confidence = 0.65 (no docs → LLM general knowledge, medium confidence)
+    expect(result.confidence).toBe(0.65);
+    expect(result.disclaimer).toContain('general agricultural knowledge');
   });
 
   it('should add uncertainty disclaimer when confidence < 0.7', async () => {
@@ -305,9 +305,9 @@ describe('AIAssistant.processQuery', () => {
     const a = new AIAssistant(mockLlm, failingRag, new SafetyGuardrail());
 
     const result = await a.processQuery('What is the best rice variety?', makeContext());
-    // Should degrade gracefully — low confidence due to no docs
-    expect(result.confidence).toBe(0.3);
-    expect(result.text).toContain("don't have enough information");
+    // Should degrade gracefully — LLM general knowledge, medium confidence
+    expect(result.confidence).toBe(0.65);
+    expect(result.disclaimer).toContain('general agricultural knowledge');
   });
 });
 
