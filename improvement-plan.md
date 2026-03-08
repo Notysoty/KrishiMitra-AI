@@ -174,8 +174,11 @@
 - **Pending:** Run `cdk deploy` from AWS console / CLI with correct IAM permissions
 
 ### ✅ T4-5: Bedrock Knowledge Base — Agricultural Document Ingestion
-- **Status:** `BedrockEmbeddingService` wired; seed data has 5 knowledge articles
-- **Pending:** Upload PDFs (PM-KISAN, PMFBY, ICAR guides) to S3 in AWS console → sync Bedrock Knowledge Base
+- **Status:** KB `PJ7OHMCJCF` created; 7 agri docs uploaded to S3 (`krishimitra-knowledge-base-730335204711/agricultural-knowledge/`)
+- **KB associated with Bedrock Agent** `YC0X3UXBHI` (DRAFT version — agent prepared)
+- **Ingestion note:** API ingestion returns "server internal error" on custom OSS collection — try sync from AWS Bedrock Console as workaround
+- **Data source:** `AMGS1D4VDP` (S3 prefix: `agricultural-knowledge/`); OSS index `krishimitra-knowledge` with correct knn_vector mapping exists
+- **Not blocking:** Bedrock Agent handles all AI queries; `BedrockKBRetriever` is disabled when agent is configured
 
 ### ✅ T4-6: MLOps — Model Monitoring
 - **Fix:** `ServiceRegistry` wraps every Bedrock LLM call — records `modelName`, `latencyMs`, `success/error` to `MLOpsService`
@@ -219,4 +222,4 @@
 | T2-8 | Get free API key at data.gov.in → add `DATA_GOV_API_KEY` to `.env` |
 | T3-1 | Create Bedrock Agent in AWS console → add `BEDROCK_AGENT_ID` + `BEDROCK_AGENT_ALIAS_ID` to `.env` |
 | T4-4 | Run `cdk deploy` with IAM permissions |
-| T4-5 | Upload agri PDFs to S3 → sync Bedrock Knowledge Base in AWS console |
+| T4-5 | Go to AWS Bedrock Console → Knowledge bases → `krishimitra-kb-v2` → click **Sync** to trigger ingestion |
