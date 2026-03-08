@@ -9,7 +9,7 @@ export function LanguageSelector() {
       aria-label="Select Language"
       value={language}
       onChange={(e) => setLanguage(e.target.value as Language)}
-      style={{ padding: '4px 8px', fontSize: '14px' }}
+      className="lang-select-light"
     >
       {supportedLanguages.map((lang) => (
         <option key={lang.code} value={lang.code}>

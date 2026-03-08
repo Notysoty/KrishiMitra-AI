@@ -62,13 +62,12 @@ async function apiFetch(
         if (refreshed.success && refreshed.token) {
           headers['Authorization'] = `Bearer ${refreshed.token}`;
           const retried = await fetch(url, { ...options, headers });
+          // Only redirect if refresh also fails (token truly invalid)
           if (!retried.ok && retried.status === 401) {
-            // Redirect to login
-            window.location.href = '/login';
+            throw new Error('Unauthorized');
           }
           return retried;
         } else {
-          window.location.href = '/login';
           throw new Error('Unauthorized');
         }
       }
@@ -92,11 +91,37 @@ async function apiFetch(
   throw new Error('Request failed after retries');
 }
 
-export async function sendMessage(text: string): Promise<AIResponse> {
+export interface ConversationMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface FarmContext {
+  farmName?: string;
+  state?: string;
+  district?: string;
+  soilType?: string;
+  irrigationType?: string;
+  crops?: string[];
+  latitude?: number | null;
+  longitude?: number | null;
+}
+
+export async function sendMessage(
+  text: string,
+  language = 'en',
+  history?: ConversationMessage[],
+  farm?: FarmContext | null,
+  userName?: string,
+): Promise<AIResponse> {
   try {
+    const body: Record<string, unknown> = { query: text, language };
+    if (history && history.length > 0) body.history = history;
+    if (farm) body.farm = farm;
+    if (userName) body.userName = userName;
     const res = await apiFetch('/api/v1/ai/chat', {
       method: 'POST',
-      body: JSON.stringify({ message: text }),
+      body: JSON.stringify(body),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();

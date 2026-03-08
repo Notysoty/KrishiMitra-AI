@@ -4,6 +4,22 @@ export interface AuthUser {
   phone: string;
   name?: string;
   sub?: string;
+  roles?: string[];
+}
+
+export function hasRole(role: string): boolean {
+  const user = getUser();
+  return user?.roles?.includes(role) ?? false;
+}
+
+export function isAdmin(): boolean {
+  return hasRole('admin') || hasRole('tenant_admin') || hasRole('platform_admin');
+}
+
+/** Converts a phone number to a deterministic UUID-format string safe for Postgres uuid columns. */
+function phoneToUuid(phone: string): string {
+  const digits = phone.replace(/\D/g, '').padStart(12, '0').slice(-12);
+  return `00000000-0000-4000-8000-${digits}`;
 }
 
 function createMockJwt(payload: Record<string, unknown>): string {
@@ -52,7 +68,12 @@ export function getUser(): AuthUser | null {
   if (!token) return null;
   const payload = decodeJwtPayload(token);
   if (!payload) return null;
-  return { phone: payload.phone as string, name: payload.name as string | undefined, sub: payload.sub as string | undefined };
+  return {
+    phone: payload.phone as string,
+    name: payload.name as string | undefined,
+    sub: payload.sub as string | undefined,
+    roles: (payload.roles as string[] | undefined) ?? ['farmer'],
+  };
 }
 
 export async function login(phone: string): Promise<{ success: boolean; message: string }> {
@@ -64,7 +85,7 @@ export async function verifyOtp(phone: string, otp: string): Promise<{ success: 
   await new Promise(r => setTimeout(r, 100));
   if (otp.length < 4) return { success: false, message: 'Invalid OTP' };
   const exp = Math.floor(Date.now() / 1000) + 3600;
-  const token = createMockJwt({ sub: `user_${phone}`, phone, exp });
+  const token = createMockJwt({ sub: phoneToUuid(phone), phone, roles: ['farmer'], exp });
   storeToken(token);
   return { success: true, token, message: 'Verified' };
 }
@@ -72,7 +93,7 @@ export async function verifyOtp(phone: string, otp: string): Promise<{ success: 
 export async function register(phone: string, name: string): Promise<{ success: boolean; token?: string; message: string }> {
   await new Promise(r => setTimeout(r, 100));
   const exp = Math.floor(Date.now() / 1000) + 3600;
-  const token = createMockJwt({ sub: `user_${phone}`, phone, name, exp });
+  const token = createMockJwt({ sub: phoneToUuid(phone), phone, name, roles: ['farmer'], exp });
   storeToken(token);
   return { success: true, token, message: 'Registered' };
 }

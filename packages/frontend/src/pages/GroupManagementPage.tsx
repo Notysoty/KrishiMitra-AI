@@ -4,8 +4,10 @@ import {
   getBroadcastTracking, getGroupAnalytics, exportGroupData,
   FarmerGroup, GroupMember, BroadcastMessage, GroupAnalytics,
 } from '../services/adminClient';
+import { useTranslation } from '../i18n';
 
 export const GroupManagementPage: React.FC = () => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [groups, setGroups] = useState<FarmerGroup[]>([]);
@@ -17,6 +19,10 @@ export const GroupManagementPage: React.FC = () => {
   const [newGroupForm, setNewGroupForm] = useState({ name: '', description: '' });
   const [addMemberPhone, setAddMemberPhone] = useState('');
   const [broadcastContent, setBroadcastContent] = useState('');
+  const [collectiveCrop, setCollectiveCrop] = useState('');
+  const [collectiveVolume, setCollectiveVolume] = useState('');
+  const [collectivePrice, setCollectivePrice] = useState<{ market: string; price: number } | null>(null);
+  const [suggestingBroadcast, setSuggestingBroadcast] = useState(false);
 
   const loadGroups = useCallback(async () => {
     setLoading(true);
@@ -74,6 +80,37 @@ export const GroupManagementPage: React.FC = () => {
     finally { setLoading(false); }
   };
 
+  const handleCollectivePricing = async () => {
+    if (!collectiveCrop) return;
+    setLoading(true);
+    try {
+      const { getToken } = await import('../services/authClient');
+      const token = getToken();
+      const BASE_URL = process.env.REACT_APP_API_URL ?? 'http://localhost:3000';
+      const res = await fetch(`${BASE_URL}/api/v1/markets/prices?crop=${encodeURIComponent(collectiveCrop)}`, {
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      });
+      if (res.ok) {
+        const data = await res.json() as { prices: { market: string; price_per_kg: number }[] };
+        const best = data.prices.sort((a, b) => b.price_per_kg - a.price_per_kg)[0];
+        if (best) setCollectivePrice({ market: best.market, price: best.price_per_kg });
+      }
+    } catch { setError('Failed to fetch market price.'); }
+    finally { setLoading(false); }
+  };
+
+  const handleSuggestBroadcast = async () => {
+    if (!selectedGroup) return;
+    setSuggestingBroadcast(true);
+    try {
+      const { sendMessage } = await import('../services/apiClient');
+      const prompt = `I am a field officer for "${selectedGroup.name}" farmer group with ${selectedGroup.member_count} members. Write a brief, practical WhatsApp broadcast message (max 100 words) about current seasonal farming tips or market opportunities. Keep it in simple Hindi/English.`;
+      const result = await sendMessage(prompt, 'en');
+      setBroadcastContent(result.text.trim());
+    } catch { setError('AI suggestion failed. Please try again.'); }
+    finally { setSuggestingBroadcast(false); }
+  };
+
   const handleExport = async () => {
     if (!selectedGroup) return;
     try {
@@ -88,91 +125,148 @@ export const GroupManagementPage: React.FC = () => {
     } catch { setError('Failed to export data.'); }
   };
 
-  const containerStyle: React.CSSProperties = { maxWidth: 800, margin: '0 auto', fontFamily: 'sans-serif' };
-  const headerStyle: React.CSSProperties = { padding: '12px 16px', backgroundColor: '#00695c', color: '#fff', fontWeight: 600, fontSize: 18 };
-  const inputStyle: React.CSSProperties = { padding: '6px 10px', border: '1px solid #ccc', borderRadius: 4, fontSize: 14, marginRight: 8 };
-  const btnStyle: React.CSSProperties = { padding: '6px 16px', backgroundColor: '#00695c', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 14 };
-
   return (
-    <div style={containerStyle} data-testid="group-management-page">
-      <div style={headerStyle}>Field Officer Group Management</div>
+    <div className="page-container fade-in" data-testid="group-management-page">
+      <div className="section-header-light">👥 {t('groupManagement')}</div>
 
-      {loading && <div data-testid="loading-indicator" style={{ padding: 24, textAlign: 'center', color: '#666' }}>Loading...</div>}
-      {error && <div data-testid="error-message" role="alert" style={{ padding: '8px 16px', backgroundColor: '#ffebee', color: '#c62828', fontSize: 13 }}>{error}</div>}
+      {loading && <div data-testid="loading-indicator" className="p-4"><div className="skeleton-heading mb-3" /><div className="skeleton-line" /><div className="skeleton-line medium" /><div className="skeleton-line short" /></div>}
+      {error && <div data-testid="error-message" role="alert" className="alert-box alert-error">{error}</div>}
 
-      <div style={{ padding: 16 }}>
-        <div style={{ marginBottom: 16, padding: 12, backgroundColor: '#f5f5f5', borderRadius: 8 }}>
-          <div style={{ fontWeight: 600, marginBottom: 8 }}>Create Group</div>
-          <input style={inputStyle} placeholder="Group Name" value={newGroupForm.name} onChange={e => setNewGroupForm(f => ({ ...f, name: e.target.value }))} data-testid="group-name-input" />
-          <input style={inputStyle} placeholder="Description" value={newGroupForm.description} onChange={e => setNewGroupForm(f => ({ ...f, description: e.target.value }))} data-testid="group-desc-input" />
-          <button style={btnStyle} onClick={handleCreateGroup} data-testid="create-group-btn">Create</button>
+      <div className="mt-4">
+        <div className="form-section">
+          <div className="form-section-title">Create Group</div>
+          <div className="form-row mb-3">
+            <div className="form-group">
+              <input className="form-input" placeholder="Group Name" value={newGroupForm.name} onChange={e => setNewGroupForm(f => ({ ...f, name: e.target.value }))} data-testid="group-name-input" />
+            </div>
+            <div className="form-group">
+              <input className="form-input" placeholder="Description" value={newGroupForm.description} onChange={e => setNewGroupForm(f => ({ ...f, description: e.target.value }))} data-testid="group-desc-input" />
+            </div>
+          </div>
+          <button className="btn btn-primary" onClick={handleCreateGroup} data-testid="create-group-btn">Create</button>
         </div>
 
         <div data-testid="groups-list">
-          <h3>Groups</h3>
+          <h3 className="mb-3">Groups</h3>
           {groups.map(g => (
             <div key={g.id} data-testid={`group-${g.id}`} onClick={() => handleSelectGroup(g)}
-              style={{ padding: 12, marginBottom: 8, backgroundColor: selectedGroup?.id === g.id ? '#e0f2f1' : '#fafafa', borderRadius: 8, cursor: 'pointer', border: '1px solid #e0e0e0' }}>
-              <div style={{ fontWeight: 600 }}>{g.name}</div>
-              <div style={{ fontSize: 12, color: '#666' }}>{g.member_count} members{g.description ? ` • ${g.description}` : ''}</div>
+              className={`card mb-2 ${selectedGroup?.id === g.id ? '' : ''}`}
+              style={{ cursor: 'pointer', borderColor: selectedGroup?.id === g.id ? 'var(--primary)' : undefined, background: selectedGroup?.id === g.id ? 'var(--primary-50)' : undefined }}>
+              <div className="card-body">
+                <div className="font-semibold">{g.name}</div>
+                <div className="text-xs text-muted">{g.member_count} members{g.description ? ` • ${g.description}` : ''}</div>
+              </div>
             </div>
           ))}
         </div>
 
         {selectedGroup && (
-          <div data-testid="group-details" style={{ marginTop: 16 }}>
-            <h3>{selectedGroup.name}</h3>
+          <div data-testid="group-details" className="mt-4">
+            <h3 className="mb-3">{selectedGroup.name}</h3>
 
             {analytics && (
-              <div data-testid="group-analytics" style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
-                <div style={{ flex: 1, padding: 8, backgroundColor: '#e0f2f1', borderRadius: 8, textAlign: 'center' }}>
-                  <div style={{ fontSize: 18, fontWeight: 700 }}>{analytics.member_count}</div>
-                  <div style={{ fontSize: 11 }}>Members</div>
+              <div className="stat-grid mb-4" data-testid="group-analytics">
+                <div className="stat-card" style={{ background: 'var(--primary-50)' }}>
+                  <div className="stat-value">{analytics.member_count}</div>
+                  <div className="stat-label">Members</div>
                 </div>
-                <div style={{ flex: 1, padding: 8, backgroundColor: '#e8f5e9', borderRadius: 8, textAlign: 'center' }}>
-                  <div style={{ fontSize: 18, fontWeight: 700 }}>{analytics.active_members}</div>
-                  <div style={{ fontSize: 11 }}>Active</div>
+                <div className="stat-card" style={{ background: 'var(--success-light)' }}>
+                  <div className="stat-value">{analytics.active_members}</div>
+                  <div className="stat-label">Active</div>
                 </div>
-                <div style={{ flex: 1, padding: 8, backgroundColor: '#e3f2fd', borderRadius: 8, textAlign: 'center' }}>
-                  <div style={{ fontSize: 18, fontWeight: 700 }}>{(analytics.avg_view_rate * 100).toFixed(0)}%</div>
-                  <div style={{ fontSize: 11 }}>View Rate</div>
+                <div className="stat-card" style={{ background: 'var(--accent-light)' }}>
+                  <div className="stat-value">{(analytics.avg_view_rate * 100).toFixed(0)}%</div>
+                  <div className="stat-label">View Rate</div>
                 </div>
-                <div style={{ flex: 1, padding: 8, backgroundColor: '#fff3e0', borderRadius: 8, textAlign: 'center' }}>
-                  <div style={{ fontSize: 18, fontWeight: 700 }}>{analytics.messages_sent}</div>
-                  <div style={{ fontSize: 11 }}>Messages</div>
+                <div className="stat-card" style={{ background: 'var(--warning-light)' }}>
+                  <div className="stat-value">{analytics.messages_sent}</div>
+                  <div className="stat-label">Messages</div>
                 </div>
               </div>
             )}
 
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ fontWeight: 600, marginBottom: 8 }}>Add Member</div>
-              <input style={inputStyle} placeholder="Phone number" value={addMemberPhone} onChange={e => setAddMemberPhone(e.target.value)} data-testid="add-member-phone" />
-              <button style={btnStyle} onClick={handleAddMember} data-testid="add-member-btn">Add</button>
+            <div className="form-section">
+              <div className="form-section-title">Add Member</div>
+              <div className="flex gap-2 items-center">
+                <input className="form-input" placeholder="Phone number" value={addMemberPhone} onChange={e => setAddMemberPhone(e.target.value)} data-testid="add-member-phone" style={{ flex: 1 }} />
+                <button className="btn btn-primary" onClick={handleAddMember} data-testid="add-member-btn">Add</button>
+              </div>
             </div>
 
-            <div data-testid="members-list" style={{ marginBottom: 16 }}>
-              <div style={{ fontWeight: 600, marginBottom: 8 }}>Members ({members.length})</div>
+            <div data-testid="members-list" className="card mb-4">
+              <div className="card-header">Members ({members.length})</div>
               {members.map(m => (
-                <div key={m.user_id} data-testid={`member-${m.user_id}`} style={{ padding: 8, borderBottom: '1px solid #eee', fontSize: 13 }}>
+                <div key={m.user_id} data-testid={`member-${m.user_id}`} className="text-sm" style={{ padding: '10px 14px', borderBottom: '1px solid var(--gray-100)' }}>
                   {m.name} — {m.phone}
                 </div>
               ))}
             </div>
 
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ fontWeight: 600, marginBottom: 8 }}>Broadcast Message</div>
-              <textarea style={{ ...inputStyle, width: '100%', minHeight: 60 }} placeholder="Message content" value={broadcastContent} onChange={e => setBroadcastContent(e.target.value)} data-testid="broadcast-input" />
-              <button style={btnStyle} onClick={handleBroadcast} data-testid="send-broadcast-btn">Send Broadcast</button>
+            <div className="form-section">
+              <div className="form-section-title">🌾 Collective Crop Pricing</div>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
+                Aggregate your group&apos;s crop volumes to negotiate better prices at the mandi.
+              </p>
+              <div className="flex gap-2 items-center" style={{ flexWrap: 'wrap', gap: '0.5rem', display: 'flex' }}>
+                <input
+                  className="form-input"
+                  placeholder="Crop (e.g. Tomato)"
+                  value={collectiveCrop}
+                  onChange={e => setCollectiveCrop(e.target.value)}
+                  style={{ flex: 1, minWidth: 140 }}
+                />
+                <input
+                  className="form-input"
+                  placeholder="Total volume (kg)"
+                  type="number"
+                  value={collectiveVolume}
+                  onChange={e => setCollectiveVolume(e.target.value)}
+                  style={{ flex: 1, minWidth: 120 }}
+                />
+                <button className="btn btn-accent" onClick={handleCollectivePricing}>
+                  Check Best Price
+                </button>
+              </div>
+              {collectivePrice && (
+                <div className="alert-box alert-success mt-3" style={{ marginTop: '0.75rem' }}>
+                  <strong>Best market:</strong> {collectivePrice.market} — ₹{collectivePrice.price}/kg
+                  {collectiveVolume && (
+                    <div>
+                      <strong>Estimated group revenue:</strong> ₹{(parseFloat(collectiveVolume) * collectivePrice.price).toLocaleString('en-IN')}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="form-section">
+              <div className="form-section-title">📢 Broadcast Message</div>
+              <div className="form-group">
+                <textarea className="form-input" placeholder="Message content" value={broadcastContent} onChange={e => setBroadcastContent(e.target.value)} data-testid="broadcast-input" style={{ minHeight: 80 }} />
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <button className="btn btn-primary" onClick={handleBroadcast} data-testid="send-broadcast-btn">📤 Send Broadcast</button>
+                <button
+                  className={`btn btn-ghost ${suggestingBroadcast ? 'btn-loading' : ''}`}
+                  onClick={handleSuggestBroadcast}
+                  disabled={suggestingBroadcast}
+                  title="Let AI suggest a seasonal farming broadcast message"
+                >
+                  {suggestingBroadcast ? <><span className="btn-spinner" /> Generating...</> : '✨ AI Suggest'}
+                </button>
+              </div>
             </div>
 
             {lastBroadcast && (
-              <div data-testid="broadcast-tracking" style={{ padding: 12, backgroundColor: '#e8f5e9', borderRadius: 8, marginBottom: 16 }}>
-                <div style={{ fontWeight: 600 }}>Last Broadcast</div>
-                <div style={{ fontSize: 13 }}>Delivered: {lastBroadcast.delivered}/{lastBroadcast.total} | Viewed: {lastBroadcast.viewed}/{lastBroadcast.total}</div>
+              <div data-testid="broadcast-tracking" className="alert-box alert-success mb-4">
+                <div>
+                  <div className="font-semibold">Last Broadcast</div>
+                  <div className="text-sm">Delivered: {lastBroadcast.delivered}/{lastBroadcast.total} | Viewed: {lastBroadcast.viewed}/{lastBroadcast.total}</div>
+                </div>
               </div>
             )}
 
-            <button style={btnStyle} onClick={handleExport} data-testid="export-group-btn">Export Group Data (CSV)</button>
+            <button className="btn btn-accent" onClick={handleExport} data-testid="export-group-btn">Export Group Data (CSV)</button>
           </div>
         )}
       </div>

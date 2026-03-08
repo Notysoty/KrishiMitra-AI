@@ -1,4 +1,5 @@
 import { DiseaseClassification, Recommendation, RecommendationType } from '../../types';
+import { BedrockMultimodalClient, isBedrockConfigured } from './BedrockLLMClient';
 
 /** Supported image MIME types */
 const SUPPORTED_FORMATS = ['image/jpeg', 'image/png'];
@@ -83,6 +84,13 @@ export interface ClassificationRecord {
  */
 export class DiseaseClassifier {
   private history: ClassificationRecord[] = [];
+  private bedrockClient: BedrockMultimodalClient | null = null;
+
+  constructor() {
+    if (isBedrockConfigured()) {
+      this.bedrockClient = new BedrockMultimodalClient();
+    }
+  }
 
   // ── Public API ──────────────────────────────────────────────
 
@@ -128,18 +136,104 @@ export class DiseaseClassifier {
     userId: string,
     tenantId: string,
     storeConsent: boolean = false,
+    mimeType: string = 'image/jpeg',
   ): Promise<DiseaseClassification> {
-    // 1. Preprocess (MVP: extract metadata for deterministic mock)
+    if (this.bedrockClient) {
+      try {
+        return await this.classifyWithBedrock(image, cropType, userId, tenantId, storeConsent, mimeType);
+      } catch (err) {
+        console.warn('Bedrock classification failed, falling back to mock:', (err as Error).message);
+      }
+    }
+
+    return this.classifyWithMock(image, cropType, userId, tenantId, storeConsent);
+  }
+
+  private async classifyWithBedrock(
+    image: Buffer,
+    cropType: string,
+    userId: string,
+    tenantId: string,
+    storeConsent: boolean,
+    mimeType: string = 'image/jpeg',
+  ): Promise<DiseaseClassification> {
+    const imageBase64 = image.toString('base64');
+    const mediaType = mimeType === 'image/png' ? 'image/png' : 'image/jpeg';
+
+    const rawResponse = await this.bedrockClient!.classifyImage(imageBase64, mediaType, cropType);
+
+    const jsonMatch = rawResponse.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      throw new Error('Could not parse JSON from Bedrock response');
+    }
+
+    const parsed = JSON.parse(jsonMatch[0]);
+
+    const confidence = Math.max(0, Math.min(1, parsed.confidence ?? 0));
+    const disease = parsed.disease ?? 'unknown';
+    const disclaimer =
+      'For chemical treatments, consult a licensed agronomist or agricultural extension officer for proper dosage, safety equipment, and application methods.';
+
+    if (confidence < UNCERTAINTY_THRESHOLD) {
+      const result: DiseaseClassification = {
+        disease: 'unknown',
+        confidence,
+        message: parsed.message ?? 'Uncertain diagnosis. Please consult a local agronomist for accurate identification.',
+        recommendations: [],
+        disclaimer: 'For accurate diagnosis, please consult an agricultural expert.',
+      };
+      this.storeRecord(userId, tenantId, result, cropType, storeConsent);
+      return result;
+    }
+
+    const mapRecommendationType = (t: string): RecommendationType => {
+      const lower = t.toLowerCase();
+      if (lower === 'chemical') return RecommendationType.CHEMICAL;
+      if (lower === 'cultural') return RecommendationType.CULTURAL;
+      return RecommendationType.ORGANIC;
+    };
+
+    const recommendations: Recommendation[] = (parsed.recommendations ?? []).map(
+      (r: { type?: string; title?: string; description?: string; priority?: number }) => ({
+        type: mapRecommendationType(r.type ?? 'organic'),
+        title: r.title ?? '',
+        description: this.sanitizeChemicalInfo(r.description ?? ''),
+        priority: r.priority ?? 3,
+      }),
+    );
+
+    const message = parsed.message ?? this.generateMessage(disease, confidence);
+
+    const result: DiseaseClassification = {
+      disease,
+      confidence,
+      message,
+      recommendations,
+      disclaimer,
+      alternative_diagnoses: (parsed.alternative_diagnoses ?? []).map(
+        (a: { disease?: string; confidence?: number }) => ({
+          disease: a.disease ?? 'unknown',
+          confidence: a.confidence ?? 0,
+        }),
+      ),
+    };
+
+    this.storeRecord(userId, tenantId, result, cropType, storeConsent);
+    return result;
+  }
+
+  private async classifyWithMock(
+    image: Buffer,
+    cropType: string,
+    userId: string,
+    tenantId: string,
+    storeConsent: boolean,
+  ): Promise<DiseaseClassification> {
     const preprocessed = this.preprocessImage(image);
-
-    // 2. Run mock inference
     const predictions = this.mockInference(preprocessed, cropType);
-
-    // 3. Top prediction
     const top = predictions[0];
     const confidence = top.probability;
 
-    // 4. Low confidence → uncertain diagnosis (Req 7.3)
     if (confidence < UNCERTAINTY_THRESHOLD) {
       const result: DiseaseClassification = {
         disease: 'unknown',
@@ -152,13 +246,8 @@ export class DiseaseClassifier {
       return result;
     }
 
-    // 5. Get & sanitize recommendations (Req 7.4, 7.5, 7.6)
     const recommendations = this.getRecommendations(top.disease);
-
-    // 6. Build message (Req 7.7)
     const message = this.generateMessage(top.disease, confidence);
-
-    // 7. Chemical disclaimer (Req 7.5)
     const disclaimer =
       'For chemical treatments, consult a licensed agronomist or agricultural extension officer for proper dosage, safety equipment, and application methods.';
 
@@ -174,9 +263,7 @@ export class DiseaseClassifier {
       })),
     };
 
-    // 8. Store with consent (Req 7.10)
     this.storeRecord(userId, tenantId, result, cropType, storeConsent);
-
     return result;
   }
 

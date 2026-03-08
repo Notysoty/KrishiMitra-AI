@@ -20,6 +20,7 @@ import {
   SpeechAttemptTracker,
 } from '../../types/speech';
 import { VoiceCommandParser } from './VoiceCommandParser';
+import { AwsCloudSpeechProvider, isSpeechConfigured } from './AwsCloudSpeechProvider';
 
 // ── Constants ───────────────────────────────────────────────────
 
@@ -74,7 +75,9 @@ export class SpeechService {
   private attemptTrackers = new Map<string, SpeechAttemptTracker>();
 
   constructor(
-    provider: CloudSpeechProvider = new MockCloudSpeechProvider(),
+    provider: CloudSpeechProvider = isSpeechConfigured()
+      ? new AwsCloudSpeechProvider()
+      : new MockCloudSpeechProvider(),
     commandParser: VoiceCommandParser = new VoiceCommandParser(),
   ) {
     this.provider = provider;

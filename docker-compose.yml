@@ -1,0 +1,86 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg15
+    container_name: krishimitra-db
+    environment:
+      POSTGRES_DB: krishimitra
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d krishimitra']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: krishimitra-redis
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  backend:
+    build:
+      context: ./packages/backend
+      dockerfile: Dockerfile.dev
+    container_name: krishimitra-backend
+    environment:
+      PORT: 3000
+      NODE_ENV: development
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/krishimitra
+      DB_SSL: 'false'
+      JWT_SECRET: krishimitra-dev-secret-key-change-in-production
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      BEDROCK_ENABLED: ${BEDROCK_ENABLED:-false}
+      SPEECH_ENABLED: ${SPEECH_ENABLED:-false}
+      SNS_ENABLED: ${SNS_ENABLED:-false}
+      DATA_GOV_API_KEY: ${DATA_GOV_API_KEY:-}
+    ports:
+      - '3000:3000'
+    volumes:
+      - ./packages/backend/src:/app/src
+      - /app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./packages/frontend
+      dockerfile: Dockerfile.dev
+    container_name: krishimitra-frontend
+    environment:
+      PORT: 5000
+      HOST: 0.0.0.0
+      DANGEROUSLY_DISABLE_HOST_CHECK: 'true'
+      REACT_APP_API_URL: http://localhost:3000
+      WDS_SOCKET_PORT: '0'
+      REACT_APP_OPENWEATHER_API_KEY: ${REACT_APP_OPENWEATHER_API_KEY:-}
+      REACT_APP_DATA_GOV_API_KEY: ${REACT_APP_DATA_GOV_API_KEY:-}
+    ports:
+      - '5000:5000'
+    volumes:
+      - ./packages/frontend/src:/app/src
+      - /app/node_modules
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  redis_data:

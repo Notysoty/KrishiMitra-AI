@@ -17,6 +17,13 @@ export interface CropManagerProps {
 
 const STATUSES: Crop['status'][] = ['planned', 'planted', 'growing', 'harvested'];
 
+const STATUS_BADGE: Record<Crop['status'], string> = {
+  planned: 'badge badge-blue',
+  planted: 'badge badge-yellow',
+  growing: 'badge badge-green',
+  harvested: 'badge badge-purple',
+};
+
 const emptyCrop = (): Omit<Crop, 'id'> => ({
   type: '',
   variety: '',
@@ -73,58 +80,81 @@ export const CropManager: React.FC<CropManagerProps> = ({ crops, onChange }) => 
   };
 
   return (
-    <div data-testid="crop-manager">
-      <h3>Crops</h3>
+    <div data-testid="crop-manager" className="form-section">
+      <div className="form-section-title">🌱 Crops</div>
       {crops.length > 0 && (
-        <ul data-testid="crop-list">
+        <div data-testid="crop-list" className="mb-3">
           {crops.map((crop) => (
-            <li key={crop.id} data-testid={`crop-${crop.id}`} style={{ marginBottom: 8 }}>
-              <strong>{crop.type}</strong> — {crop.variety} ({crop.acreage} acres, {crop.status})
-              <button onClick={() => handleEdit(crop)} style={{ marginLeft: 8 }} type="button">Edit</button>
-              {confirmRemoveId === crop.id ? (
-                <span style={{ marginLeft: 8 }}>
-                  <span>Remove this crop?</span>
-                  <button onClick={() => handleRemove(crop.id)} type="button" data-testid="confirm-remove">Yes</button>
-                  <button onClick={() => setConfirmRemoveId(null)} type="button">No</button>
-                </span>
-              ) : (
-                <button onClick={() => setConfirmRemoveId(crop.id)} style={{ marginLeft: 4 }} type="button">Remove</button>
-              )}
-            </li>
+            <div key={crop.id} data-testid={`crop-${crop.id}`} className="crop-list-item">
+              <div className="crop-info">
+                <span className="crop-name">{crop.type}</span>
+                <div className="crop-details">{crop.variety} · {crop.acreage} acres · <span className={STATUS_BADGE[crop.status]}>{crop.status}</span></div>
+              </div>
+              <div className="crop-actions">
+                <button className="btn btn-ghost btn-sm" onClick={() => handleEdit(crop)} type="button">✏️ Edit</button>
+                {confirmRemoveId === crop.id ? (
+                  <span className="flex items-center gap-2">
+                    <span className="text-sm">Remove?</span>
+                    <button className="btn btn-danger btn-sm" onClick={() => handleRemove(crop.id)} type="button" data-testid="confirm-remove">Yes</button>
+                    <button className="btn btn-ghost btn-sm" onClick={() => setConfirmRemoveId(null)} type="button">No</button>
+                  </span>
+                ) : (
+                  <button className="btn btn-ghost btn-sm" onClick={() => setConfirmRemoveId(crop.id)} type="button">🗑️ Remove</button>
+                )}
+              </div>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
-      <div data-testid="crop-form" style={{ border: '1px solid #ccc', padding: 12, marginTop: 8 }}>
-        <h4>{editingId ? 'Edit Crop' : 'Add Crop'}</h4>
-        <div>
-          <label>Crop Type: <input value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} data-testid="crop-type" /></label>
-          {errors.type && <span role="alert" style={{ color: 'red' }}>{errors.type}</span>}
+      {crops.length === 0 && (
+        <div className="empty-state mb-3">
+          <div className="empty-icon">🌾</div>
+          <div className="empty-text">No crops added yet</div>
         </div>
-        <div>
-          <label>Variety: <input value={form.variety} onChange={(e) => setForm({ ...form, variety: e.target.value })} data-testid="crop-variety" /></label>
-          {errors.variety && <span role="alert" style={{ color: 'red' }}>{errors.variety}</span>}
-        </div>
-        <div>
-          <label>Acreage: <input type="number" value={form.acreage} onChange={(e) => setForm({ ...form, acreage: Number(e.target.value) })} data-testid="crop-acreage" /></label>
-          {errors.acreage && <span role="alert" style={{ color: 'red' }}>{errors.acreage}</span>}
-        </div>
-        <div>
-          <label>Planting Date: <input type="date" value={form.plantingDate} onChange={(e) => setForm({ ...form, plantingDate: e.target.value })} data-testid="crop-planting-date" /></label>
-          {errors.plantingDate && <span role="alert" style={{ color: 'red' }}>{errors.plantingDate}</span>}
-        </div>
-        <div>
-          <label>Expected Harvest: <input type="date" value={form.expectedHarvestDate} onChange={(e) => setForm({ ...form, expectedHarvestDate: e.target.value })} data-testid="crop-harvest-date" /></label>
-          {errors.expectedHarvestDate && <span role="alert" style={{ color: 'red' }}>{errors.expectedHarvestDate}</span>}
-        </div>
-        <div>
-          <label>Status:
-            <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as Crop['status'] })} data-testid="crop-status">
+      )}
+      <div data-testid="crop-form" className="card">
+        <div className="card-header">{editingId ? '✏️ Edit Crop' : '➕ Add Crop'}</div>
+        <div className="card-body">
+          <div className="form-row">
+            <div className="form-group">
+              <label className="form-label">Crop Type</label>
+              <input className="form-input" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} data-testid="crop-type" placeholder="e.g. Rice, Wheat" />
+              {errors.type && <span role="alert" className="form-error">{errors.type}</span>}
+            </div>
+            <div className="form-group">
+              <label className="form-label">Variety</label>
+              <input className="form-input" value={form.variety} onChange={(e) => setForm({ ...form, variety: e.target.value })} data-testid="crop-variety" placeholder="e.g. Basmati" />
+              {errors.variety && <span role="alert" className="form-error">{errors.variety}</span>}
+            </div>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Acreage</label>
+            <input className="form-input" type="number" value={form.acreage} onChange={(e) => setForm({ ...form, acreage: Number(e.target.value) })} data-testid="crop-acreage" />
+            {errors.acreage && <span role="alert" className="form-error">{errors.acreage}</span>}
+          </div>
+          <div className="form-row">
+            <div className="form-group">
+              <label className="form-label">Planting Date</label>
+              <input className="form-input" type="date" value={form.plantingDate} onChange={(e) => setForm({ ...form, plantingDate: e.target.value })} data-testid="crop-planting-date" />
+              {errors.plantingDate && <span role="alert" className="form-error">{errors.plantingDate}</span>}
+            </div>
+            <div className="form-group">
+              <label className="form-label">Expected Harvest</label>
+              <input className="form-input" type="date" value={form.expectedHarvestDate} onChange={(e) => setForm({ ...form, expectedHarvestDate: e.target.value })} data-testid="crop-harvest-date" />
+              {errors.expectedHarvestDate && <span role="alert" className="form-error">{errors.expectedHarvestDate}</span>}
+            </div>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Status</label>
+            <select className="form-select" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as Crop['status'] })} data-testid="crop-status">
               {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
-          </label>
+          </div>
+          <div className="flex gap-2">
+            <button className="btn btn-primary" onClick={handleAdd} type="button" data-testid="crop-submit">{editingId ? '✅ Update Crop' : '➕ Add Crop'}</button>
+            {editingId && <button className="btn btn-secondary" onClick={handleCancel} type="button">Cancel</button>}
+          </div>
         </div>
-        <button onClick={handleAdd} type="button" data-testid="crop-submit">{editingId ? 'Update Crop' : 'Add Crop'}</button>
-        {editingId && <button onClick={handleCancel} type="button" style={{ marginLeft: 8 }}>Cancel</button>}
       </div>
     </div>
   );

@@ -1,0 +1,91 @@
+Rice (Paddy) Cultivation Guide - India
+
+POPULAR VARIETIES
+Kharif (Short Duration, 105-120 days): IR-36, Samba Mahsuri, MTU 1010
+Medium Duration (125-145 days): Swarna (MTU 7029), Jaya, IR-64
+Long Duration (145+ days): Pusa Basmati-1121, Sugandha, Taraori Basmati
+Hybrid varieties: PHB 71, KRH-2, Arize 6444
+
+CLIMATE REQUIREMENTS
+- Temperature: 20-37 degrees C
+- Rainfall: 1000-2000mm annually or equivalent irrigation
+- High humidity and sunshine required
+
+NURSERY PREPARATION
+- Seed rate: 25-30 kg/ha (wet nursery), 60-80 kg/ha (dry nursery)
+- Seed treatment: Soak in 1% KCl solution (float method to remove chaffy seeds)
+- Treat with Carbendazim 2g/kg to prevent blast
+- Raise seedlings for 25-30 days (SRI method: 8-12 days)
+
+LAND PREPARATION
+- Puddling: 2-3 ploughings with standing water
+- Levelling essential for uniform water distribution
+- Incorporate green manure (Dhaincha/Sesbania) before puddling
+
+TRANSPLANTING
+- Traditional spacing: 20cm x 15cm
+- SRI (System of Rice Intensification): 25cm x 25cm; single seedling per hill
+- Transplant at 2-3 leaf stage for SRI; 25-30 days for traditional
+- Line transplanting is preferred over random transplanting
+
+WATER MANAGEMENT
+- Maintain 5-7cm water depth for first 2 weeks after transplanting
+- Drain and dry field for 3-5 days at tillering (promotes root growth)
+- Keep 2-5cm water at critical stages: panicle initiation, flowering, grain filling
+- Drain 2 weeks before harvest
+- AWD (Alternate Wetting and Drying) saves 30% water
+
+FERTILIZER APPLICATION
+- High yielding varieties (HYV): 120-150 kg N, 60 kg P, 60 kg K per hectare
+- Basal: All P and K, 25% N
+- Tillering (20 DAT): 50% N
+- Panicle initiation (45 DAT): 25% N
+- Zinc deficiency: Apply ZnSO4 25 kg/ha
+
+WEED MANAGEMENT
+- Maintain 5cm water for 2 weeks after transplanting to suppress weeds
+- Bispyribac sodium (Nominee Gold) for grassy weeds at 15-20 DAT
+- Pyrazosulfuron for broad-leaf weeds
+- 2-4-D for sedges and broad-leaf weeds
+
+MAJOR DISEASES
+1. Blast (Pyricularia oryzae)
+   - Diamond-shaped lesions on leaves; can infect neck causing panicle blast
+   - Management: Tricyclazole 75WP at 6g/10 liter; Carbendazim; use resistant varieties
+
+2. Brown Plant Hopper (BPH) - Viral vector
+   - Hopper burn in severe infestation
+   - Management: Imidacloprid 200SL at 0.25ml/liter; avoid excess N; drain field
+
+3. Bacterial Leaf Blight (BLB)
+   - Yellow to white water-soaked lesions on leaf margins
+   - Management: No effective fungicide; spray Copper oxychloride; drain standing water
+
+4. Sheath Blight (Rhizoctonia solani)
+   - Oval lesions on leaf sheath
+   - Management: Hexaconazole 5EC at 1.5ml/liter; Validamycin
+
+MAJOR PESTS
+1. Stem Borer (Scirpophaga incertulas)
+   - Dead hearts in vegetative; white ears in reproductive stage
+   - Management: Release Trichogramma japonicum (1 lakh/ha); Chlorantraniliprole 18.5 SC at 0.3ml/liter
+
+2. Brown Planthopper (BPH)
+   - Causes hopper burn; also transmits grassy stunt virus
+   - Management: Pymetrozine, Buprofezin; avoid excess nitrogen
+
+3. Leaf Folder
+   - Larvae fold leaves and feed inside
+   - Management: Chlorpyriphos 20EC at 2.5ml/liter when 20% leaves are folded
+
+HARVESTING
+- Harvest when 80-85% grains are golden yellow
+- Moisture content at harvest: 20-22%
+- Dry to 14% moisture for safe storage
+- Average yield: 4-6 tonnes/ha (HYV under irrigation)
+- Basmati: 3-4 tonnes/ha
+
+POST-HARVEST
+- Threshing: Same day as harvest to minimize shattering losses
+- Dry on clean surfaces; avoid drying on roads
+- Store in airtight bags or PUSA bins to prevent weevil damage

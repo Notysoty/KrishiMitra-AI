@@ -208,4 +208,77 @@ router.get(
   },
 );
 
+/**
+ * POST /api/v1/markets/negotiate
+ * Body: { crop, market, offeredPrice, farmerState? }
+ * Returns AI-powered mandi price negotiation advice.
+ */
+router.post(
+  '/negotiate',
+  requirePermissions(Permission.MARKET_VIEW),
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { crop, market, offeredPrice, farmerState } = req.body as {
+        crop: string;
+        market: string;
+        offeredPrice: number;
+        farmerState?: string;
+      };
+
+      if (!crop || !market || offeredPrice == null) {
+        res.status(400).json({ error: 'crop, market, and offeredPrice are required.' });
+        return;
+      }
+
+      // Fetch current prices for this crop across available markets
+      const result = await marketService.getPrices(crop, farmerState);
+      const prices = result.prices;
+
+      // Find the current price at the offered market (unit: ₹/quintal → ₹/kg = /100)
+      const marketEntry = prices.find(
+        (p) => p.market_name.toLowerCase().includes(market.toLowerCase()),
+      );
+      const bestEntry = prices.length > 0
+        ? prices.reduce((best, p) => (p.price > best.price ? p : best), prices[0])
+        : undefined;
+
+      // prices are in ₹/quintal; convert to ₹/kg
+      const currentAtMarket = marketEntry ? marketEntry.price / 100 : offeredPrice;
+      const priceDiff = ((currentAtMarket - offeredPrice) / offeredPrice) * 100;
+      const bestKg = bestEntry ? bestEntry.price / 100 : offeredPrice;
+      const bestPriceDiff = ((bestKg - offeredPrice) / offeredPrice) * 100;
+
+      let verdict: string;
+      let advice: string;
+
+      if (priceDiff >= -5) {
+        verdict = 'fair';
+        advice = `₹${offeredPrice}/kg at ${market} is close to the current market rate (₹${currentAtMarket.toFixed(1)}/kg). This is a fair price.`;
+      } else if (priceDiff < -15) {
+        verdict = 'low';
+        advice = `₹${offeredPrice}/kg is significantly below the current market rate (₹${currentAtMarket.toFixed(1)}/kg) for ${crop} at ${market}. Try negotiating for at least ₹${Math.round(currentAtMarket * 0.95)}/kg.`;
+      } else {
+        verdict = 'slightly_low';
+        advice = `₹${offeredPrice}/kg is slightly below the market rate (₹${currentAtMarket.toFixed(1)}/kg). You may be able to negotiate a small increase.`;
+      }
+
+      if (bestEntry && bestPriceDiff > 15 && bestEntry.market_name !== market) {
+        advice += ` Better price available: ${bestEntry.market_name} is currently paying ₹${bestKg.toFixed(1)}/kg. Check transport costs before switching.`;
+      }
+
+      res.json({
+        verdict,
+        offeredPrice,
+        currentMarketPrice: parseFloat(currentAtMarket.toFixed(2)),
+        bestAvailablePrice: bestKg ? parseFloat(bestKg.toFixed(2)) : undefined,
+        bestMarket: bestEntry?.market_name,
+        advice,
+        comparisons: prices.slice(0, 5).map((p) => ({ market: p.market_name, price_per_kg: parseFloat((p.price / 100).toFixed(2)) })),
+      });
+    } catch (err) {
+      handleError(res, err);
+    }
+  },
+);
+
 export default router;

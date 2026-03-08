@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from '../i18n';
 import {
   getTenantDashboard, createTenant, suspendTenant, getGlobalAIConfig, updateGlobalAIConfig,
   getCrossTenantAnalytics, getFeatureFlags, updateFeatureFlags, scheduleMaintenance, getMaintenanceWindows,
@@ -8,6 +9,7 @@ import {
 type Tab = 'tenants' | 'config' | 'analytics' | 'flags' | 'maintenance';
 
 export const PlatformAdminPage: React.FC = () => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<Tab>('tenants');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -93,132 +95,161 @@ export const PlatformAdminPage: React.FC = () => {
   };
 
   const tabs: { key: Tab; label: string }[] = [
-    { key: 'tenants', label: 'Tenants' },
-    { key: 'config', label: 'AI Config' },
-    { key: 'analytics', label: 'Analytics' },
-    { key: 'flags', label: 'Feature Flags' },
-    { key: 'maintenance', label: 'Maintenance' },
+    { key: 'tenants', label: t('tabTenants') },
+    { key: 'config', label: t('tabAiConfig') },
+    { key: 'analytics', label: t('tabAnalytics') },
+    { key: 'flags', label: t('tabFeatureFlags') },
+    { key: 'maintenance', label: t('tabMaintenance') },
   ];
 
-  const containerStyle: React.CSSProperties = { maxWidth: 800, margin: '0 auto', fontFamily: 'sans-serif' };
-  const headerStyle: React.CSSProperties = { padding: '12px 16px', backgroundColor: '#6a1b9a', color: '#fff', fontWeight: 600, fontSize: 18 };
-  const tabBarStyle: React.CSSProperties = { display: 'flex', borderBottom: '2px solid #e0e0e0', backgroundColor: '#fff' };
-  const tabStyle = (active: boolean): React.CSSProperties => ({
-    flex: 1, padding: '10px 0', textAlign: 'center', cursor: 'pointer', fontWeight: active ? 700 : 400,
-    color: active ? '#6a1b9a' : '#666', border: 'none', borderBottom: active ? '3px solid #6a1b9a' : '3px solid transparent', backgroundColor: 'transparent', fontSize: 14,
-  });
-  const sectionStyle: React.CSSProperties = { padding: 16 };
-  const inputStyle: React.CSSProperties = { padding: '6px 10px', border: '1px solid #ccc', borderRadius: 4, fontSize: 14, marginRight: 8, marginBottom: 8 };
-  const btnStyle: React.CSSProperties = { padding: '6px 16px', backgroundColor: '#6a1b9a', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 14 };
-  const dangerBtnStyle: React.CSSProperties = { ...btnStyle, backgroundColor: '#c62828' };
-  const statusColor = (s: string) => s === 'active' ? '#2e7d32' : s === 'suspended' ? '#e65100' : '#c62828';
+  const statusBadge = (s: string) => s === 'active' ? 'badge badge-green' : s === 'suspended' ? 'badge badge-yellow' : 'badge badge-red';
 
   return (
-    <div style={containerStyle} data-testid="platform-admin-page">
-      <div style={headerStyle}>Platform Administration</div>
-      <div style={tabBarStyle}>
+    <div className="page-container fade-in" data-testid="platform-admin-page">
+      <div className="section-header-light">⚙️ {t('platformAdmin')}</div>
+      <div className="tab-bar">
         {tabs.map(tab => (
-          <button key={tab.key} style={tabStyle(activeTab === tab.key)} onClick={() => setActiveTab(tab.key)} data-testid={`tab-${tab.key}`}>
+          <button key={tab.key} className={`tab-btn ${activeTab === tab.key ? 'active' : ''}`} onClick={() => setActiveTab(tab.key)} data-testid={`tab-${tab.key}`}>
             {tab.label}
           </button>
         ))}
       </div>
 
-      {loading && <div data-testid="loading-indicator" style={{ padding: 24, textAlign: 'center', color: '#666' }}>Loading...</div>}
-      {error && <div data-testid="error-message" role="alert" style={{ padding: '8px 16px', backgroundColor: '#ffebee', color: '#c62828', fontSize: 13 }}>{error}</div>}
+      {loading && <div data-testid="loading-indicator" className="p-4"><div className="skeleton-heading mb-3" /><div className="skeleton-line" /><div className="skeleton-line medium" /><div className="skeleton-line short" /></div>}
+      {error && <div data-testid="error-message" role="alert" className="alert-box alert-error">{error}</div>}
 
       {!loading && !error && (
         <div data-testid="tab-content">
           {activeTab === 'tenants' && (
-            <div style={sectionStyle} data-testid="tenants-section">
-              <h3>Tenant Management</h3>
-              <div style={{ marginBottom: 16, padding: 12, backgroundColor: '#f5f5f5', borderRadius: 8 }}>
-                <div style={{ fontWeight: 600, marginBottom: 8 }}>Create Tenant</div>
-                <input style={inputStyle} placeholder="Tenant Name" value={newTenantForm.name} onChange={e => setNewTenantForm(f => ({ ...f, name: e.target.value }))} data-testid="tenant-name" />
-                <select style={inputStyle} value={newTenantForm.type} onChange={e => setNewTenantForm(f => ({ ...f, type: e.target.value }))} data-testid="tenant-type">
-                  <option value="FPO">FPO</option><option value="NGO">NGO</option><option value="Cooperative">Cooperative</option>
-                </select>
-                <input style={inputStyle} placeholder="Admin Name" value={newTenantForm.admin_name} onChange={e => setNewTenantForm(f => ({ ...f, admin_name: e.target.value }))} data-testid="tenant-admin-name" />
-                <input style={inputStyle} placeholder="Admin Phone" value={newTenantForm.admin_phone} onChange={e => setNewTenantForm(f => ({ ...f, admin_phone: e.target.value }))} data-testid="tenant-admin-phone" />
-                <button style={btnStyle} onClick={handleCreateTenant} data-testid="create-tenant-btn">Create</button>
+            <div className="mt-4" data-testid="tenants-section">
+              <div className="form-section">
+                <div className="form-section-title">Create Tenant</div>
+                <div className="form-row mb-3">
+                  <div className="form-group">
+                    <input className="form-input" placeholder="Tenant Name" value={newTenantForm.name} onChange={e => setNewTenantForm(f => ({ ...f, name: e.target.value }))} data-testid="tenant-name" />
+                  </div>
+                  <div className="form-group">
+                    <select className="form-select" value={newTenantForm.type} onChange={e => setNewTenantForm(f => ({ ...f, type: e.target.value }))} data-testid="tenant-type">
+                      <option value="FPO">FPO</option><option value="NGO">NGO</option><option value="Cooperative">Cooperative</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="form-row mb-3">
+                  <div className="form-group">
+                    <input className="form-input" placeholder="Admin Name" value={newTenantForm.admin_name} onChange={e => setNewTenantForm(f => ({ ...f, admin_name: e.target.value }))} data-testid="tenant-admin-name" />
+                  </div>
+                  <div className="form-group">
+                    <input className="form-input" placeholder="Admin Phone" value={newTenantForm.admin_phone} onChange={e => setNewTenantForm(f => ({ ...f, admin_phone: e.target.value }))} data-testid="tenant-admin-phone" />
+                  </div>
+                </div>
+                <button className="btn btn-primary" onClick={handleCreateTenant} data-testid="create-tenant-btn">Create</button>
               </div>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }} data-testid="tenants-table">
-                <thead>
-                  <tr style={{ borderBottom: '2px solid #e0e0e0', textAlign: 'left' }}>
-                    <th style={{ padding: 8 }}>Name</th><th style={{ padding: 8 }}>Type</th><th style={{ padding: 8 }}>Status</th><th style={{ padding: 8 }}>Users</th><th style={{ padding: 8 }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tenants.map(t => (
-                    <tr key={t.id} data-testid={`tenant-row-${t.id}`} style={{ borderBottom: '1px solid #eee' }}>
-                      <td style={{ padding: 8 }}>{t.name}</td>
-                      <td style={{ padding: 8 }}>{t.type}</td>
-                      <td style={{ padding: 8, color: statusColor(t.status), fontWeight: 600 }}>{t.status}</td>
-                      <td style={{ padding: 8 }}>{t.user_count}</td>
-                      <td style={{ padding: 8 }}>
-                        {t.status === 'active' && <button style={dangerBtnStyle} onClick={() => handleSuspendTenant(t.id)} data-testid={`suspend-${t.id}`}>Suspend</button>}
-                      </td>
+              <div className="card">
+                <table className="data-table" data-testid="tenants-table">
+                  <thead>
+                    <tr>
+                      <th>Name</th><th>Type</th><th>Status</th><th>Users</th><th>Actions</th>
                     </tr>
+                  </thead>
+                  <tbody>
+                    {tenants.map(t => (
+                      <tr key={t.id} data-testid={`tenant-row-${t.id}`}>
+                        <td>{t.name}</td>
+                        <td>{t.type}</td>
+                        <td><span className={statusBadge(t.status)}>{t.status}</span></td>
+                        <td>{t.user_count}</td>
+                        <td>
+                          {t.status === 'active' && <button className="btn btn-danger btn-sm" onClick={() => handleSuspendTenant(t.id)} data-testid={`suspend-${t.id}`}>Suspend</button>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div className="mobile-card-list" data-testid="tenants-mobile-cards">
+                  {tenants.map(t => (
+                    <div key={t.id} className="mobile-card-item" data-testid={`tenant-card-${t.id}`}>
+                      <div className="mobile-card-row">
+                        <span className="mobile-card-label">Name</span>
+                        <span className="mobile-card-value">{t.name}</span>
+                      </div>
+                      <div className="mobile-card-row">
+                        <span className="mobile-card-label">Type</span>
+                        <span className="mobile-card-value">{t.type}</span>
+                      </div>
+                      <div className="mobile-card-row">
+                        <span className="mobile-card-label">Status</span>
+                        <span className="mobile-card-value"><span className={statusBadge(t.status)}>{t.status}</span></span>
+                      </div>
+                      <div className="mobile-card-row">
+                        <span className="mobile-card-label">Users</span>
+                        <span className="mobile-card-value">{t.user_count}</span>
+                      </div>
+                      {t.status === 'active' && (
+                        <div className="mobile-card-row">
+                          <span className="mobile-card-label">Actions</span>
+                          <span className="mobile-card-value">
+                            <button className="btn btn-danger btn-sm" onClick={() => handleSuspendTenant(t.id)}>Suspend</button>
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </div>
+              </div>
             </div>
           )}
 
           {activeTab === 'config' && aiConfig && (
-            <div style={sectionStyle} data-testid="config-section">
-              <h3>Global AI Configuration</h3>
-              <div style={{ marginBottom: 12 }}>
-                <label>Primary Model<br />
-                  <input style={inputStyle} value={aiConfig.primary_model} onChange={e => setAiConfig(c => c ? { ...c, primary_model: e.target.value } : c)} data-testid="ai-primary-model" />
-                </label>
+            <div className="form-section mt-4" data-testid="config-section">
+              <div className="form-section-title">Global AI Configuration</div>
+              <div className="form-group">
+                <label className="form-label">Primary Model</label>
+                <input className="form-input" value={aiConfig.primary_model} onChange={e => setAiConfig(c => c ? { ...c, primary_model: e.target.value } : c)} data-testid="ai-primary-model" />
               </div>
-              <div style={{ marginBottom: 12 }}>
-                <label>Fallback Model<br />
-                  <input style={inputStyle} value={aiConfig.fallback_model} onChange={e => setAiConfig(c => c ? { ...c, fallback_model: e.target.value } : c)} data-testid="ai-fallback-model" />
-                </label>
+              <div className="form-group">
+                <label className="form-label">Fallback Model</label>
+                <input className="form-input" value={aiConfig.fallback_model} onChange={e => setAiConfig(c => c ? { ...c, fallback_model: e.target.value } : c)} data-testid="ai-fallback-model" />
               </div>
-              <div style={{ marginBottom: 12 }}>
-                <label>Safety Level<br />
-                  <select style={inputStyle} value={aiConfig.safety_level} onChange={e => setAiConfig(c => c ? { ...c, safety_level: e.target.value as GlobalAIConfig['safety_level'] } : c)} data-testid="ai-safety-level">
-                    <option value="strict">Strict</option><option value="moderate">Moderate</option><option value="relaxed">Relaxed</option>
-                  </select>
-                </label>
+              <div className="form-group">
+                <label className="form-label">Safety Level</label>
+                <select className="form-select" value={aiConfig.safety_level} onChange={e => setAiConfig(c => c ? { ...c, safety_level: e.target.value as GlobalAIConfig['safety_level'] } : c)} data-testid="ai-safety-level">
+                  <option value="strict">Strict</option><option value="moderate">Moderate</option><option value="relaxed">Relaxed</option>
+                </select>
               </div>
-              <button style={btnStyle} onClick={handleSaveAIConfig} data-testid="save-ai-config-btn">Save Configuration</button>
+              <button className="btn btn-primary" onClick={handleSaveAIConfig} data-testid="save-ai-config-btn">Save Configuration</button>
             </div>
           )}
 
           {activeTab === 'analytics' && crossAnalytics && (
-            <div style={sectionStyle} data-testid="cross-analytics-section">
-              <h3>Cross-Tenant Analytics</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 12, marginBottom: 16 }}>
-                <div data-testid="stat-total-tenants" style={{ padding: 12, backgroundColor: '#f3e5f5', borderRadius: 8, textAlign: 'center' }}>
-                  <div style={{ fontSize: 24, fontWeight: 700 }}>{crossAnalytics.total_tenants}</div>
-                  <div style={{ fontSize: 12, color: '#666' }}>Tenants</div>
+            <div className="mt-4" data-testid="cross-analytics-section">
+              <h3 className="mb-3">Cross-Tenant Analytics</h3>
+              <div className="stat-grid mb-4">
+                <div className="stat-card" style={{ background: '#f3e8ff' }} data-testid="stat-total-tenants">
+                  <div className="stat-value">{crossAnalytics.total_tenants}</div>
+                  <div className="stat-label">Tenants</div>
                 </div>
-                <div data-testid="stat-total-users" style={{ padding: 12, backgroundColor: '#e3f2fd', borderRadius: 8, textAlign: 'center' }}>
-                  <div style={{ fontSize: 24, fontWeight: 700 }}>{crossAnalytics.total_users}</div>
-                  <div style={{ fontSize: 12, color: '#666' }}>Users</div>
+                <div className="stat-card" style={{ background: 'var(--accent-light)' }} data-testid="stat-total-users">
+                  <div className="stat-value">{crossAnalytics.total_users}</div>
+                  <div className="stat-label">Users</div>
                 </div>
-                <div data-testid="stat-total-queries" style={{ padding: 12, backgroundColor: '#e8f5e9', borderRadius: 8, textAlign: 'center' }}>
-                  <div style={{ fontSize: 24, fontWeight: 700 }}>{crossAnalytics.total_ai_queries}</div>
-                  <div style={{ fontSize: 12, color: '#666' }}>AI Queries</div>
+                <div className="stat-card" style={{ background: 'var(--success-light)' }} data-testid="stat-total-queries">
+                  <div className="stat-value">{crossAnalytics.total_ai_queries}</div>
+                  <div className="stat-label">AI Queries</div>
                 </div>
-                <div data-testid="stat-avg-response" style={{ padding: 12, backgroundColor: '#fff3e0', borderRadius: 8, textAlign: 'center' }}>
-                  <div style={{ fontSize: 24, fontWeight: 700 }}>{crossAnalytics.avg_response_time_ms}ms</div>
-                  <div style={{ fontSize: 12, color: '#666' }}>Avg Response</div>
+                <div className="stat-card" style={{ background: 'var(--warning-light)' }} data-testid="stat-avg-response">
+                  <div className="stat-value">{crossAnalytics.avg_response_time_ms}ms</div>
+                  <div className="stat-label">Avg Response</div>
                 </div>
               </div>
               <div data-testid="queries-by-day">
-                <h4>Queries by Day</h4>
+                <h4 className="mb-2">Queries by Day</h4>
                 {crossAnalytics.queries_by_day.map(d => (
-                  <div key={d.date} style={{ display: 'flex', alignItems: 'center', marginBottom: 4 }}>
-                    <span style={{ width: 100, fontSize: 12 }}>{d.date}</span>
-                    <div style={{ flex: 1, height: 16, backgroundColor: '#e0e0e0', borderRadius: 4 }}>
-                      <div style={{ height: '100%', width: `${(d.count / 1200) * 100}%`, backgroundColor: '#6a1b9a', borderRadius: 4 }} />
+                  <div key={d.date} className="flex items-center gap-2 mb-1">
+                    <span className="text-xs" style={{ width: 100 }}>{d.date}</span>
+                    <div className="progress-bar" style={{ flex: 1 }}>
+                      <div className="progress-fill" style={{ width: `${(d.count / 1200) * 100}%` }} />
                     </div>
-                    <span style={{ width: 50, textAlign: 'right', fontSize: 12 }}>{d.count}</span>
+                    <span className="text-xs" style={{ width: 50, textAlign: 'right' }}>{d.count}</span>
                   </div>
                 ))}
               </div>
@@ -226,44 +257,55 @@ export const PlatformAdminPage: React.FC = () => {
           )}
 
           {activeTab === 'flags' && (
-            <div style={sectionStyle} data-testid="flags-section">
-              <h3>Feature Flags</h3>
+            <div className="mt-4" data-testid="flags-section">
+              <h3 className="mb-3">Feature Flags</h3>
               {tenants.length > 0 && (
-                <div style={{ marginBottom: 16 }}>
-                  <label>Select Tenant: </label>
-                  <select style={inputStyle} value={selectedTenantId} onChange={async e => { setSelectedTenantId(e.target.value); setFeatureFlags(await getFeatureFlags(e.target.value)); }} data-testid="flag-tenant-select">
+                <div className="form-group">
+                  <label className="form-label">Select Tenant</label>
+                  <select className="form-select" value={selectedTenantId} onChange={async e => { setSelectedTenantId(e.target.value); setFeatureFlags(await getFeatureFlags(e.target.value)); }} data-testid="flag-tenant-select">
                     {tenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                   </select>
                 </div>
               )}
               {featureFlags && Object.entries(featureFlags).map(([feature, enabled]) => (
-                <div key={feature} style={{ display: 'flex', alignItems: 'center', marginBottom: 8, padding: 8, backgroundColor: '#f5f5f5', borderRadius: 4 }} data-testid={`flag-${feature}`}>
-                  <span style={{ flex: 1, fontSize: 14 }}>{feature.replace(/_/g, ' ')}</span>
-                  <button style={{ ...btnStyle, backgroundColor: enabled ? '#2e7d32' : '#9e9e9e', minWidth: 80 }} onClick={() => handleToggleFlag(feature)} data-testid={`toggle-${feature}`}>
-                    {enabled ? 'Enabled' : 'Disabled'}
-                  </button>
+                <div key={feature} className="flex items-center justify-between p-3 mb-2" style={{ background: 'var(--gray-50)', borderRadius: 'var(--radius-md)' }} data-testid={`flag-${feature}`}>
+                  <span className="text-sm">{feature.replace(/_/g, ' ')}</span>
+                  <button className={`toggle-switch ${enabled ? 'active' : ''}`} onClick={() => handleToggleFlag(feature)} data-testid={`toggle-${feature}`} aria-label={enabled ? 'Enabled' : 'Disabled'} />
                 </div>
               ))}
             </div>
           )}
 
           {activeTab === 'maintenance' && (
-            <div style={sectionStyle} data-testid="maintenance-section">
-              <h3>Maintenance Scheduling</h3>
-              <div style={{ marginBottom: 16, padding: 12, backgroundColor: '#f5f5f5', borderRadius: 8 }}>
-                <div style={{ fontWeight: 600, marginBottom: 8 }}>Schedule Maintenance</div>
-                <input style={inputStyle} placeholder="Title" value={maintenanceForm.title} onChange={e => setMaintenanceForm(f => ({ ...f, title: e.target.value }))} data-testid="maint-title" />
-                <input style={inputStyle} placeholder="Description" value={maintenanceForm.description} onChange={e => setMaintenanceForm(f => ({ ...f, description: e.target.value }))} data-testid="maint-description" />
-                <input style={inputStyle} type="datetime-local" value={maintenanceForm.scheduled_start} onChange={e => setMaintenanceForm(f => ({ ...f, scheduled_start: e.target.value }))} data-testid="maint-start" />
-                <input style={inputStyle} type="datetime-local" value={maintenanceForm.scheduled_end} onChange={e => setMaintenanceForm(f => ({ ...f, scheduled_end: e.target.value }))} data-testid="maint-end" />
-                <button style={btnStyle} onClick={handleScheduleMaintenance} data-testid="schedule-maint-btn">Schedule</button>
+            <div className="mt-4" data-testid="maintenance-section">
+              <div className="form-section">
+                <div className="form-section-title">Schedule Maintenance</div>
+                <div className="form-group">
+                  <input className="form-input" placeholder="Title" value={maintenanceForm.title} onChange={e => setMaintenanceForm(f => ({ ...f, title: e.target.value }))} data-testid="maint-title" />
+                </div>
+                <div className="form-group">
+                  <input className="form-input" placeholder="Description" value={maintenanceForm.description} onChange={e => setMaintenanceForm(f => ({ ...f, description: e.target.value }))} data-testid="maint-description" />
+                </div>
+                <div className="form-row mb-3">
+                  <div className="form-group">
+                    <label className="form-label">Start</label>
+                    <input className="form-input" type="datetime-local" value={maintenanceForm.scheduled_start} onChange={e => setMaintenanceForm(f => ({ ...f, scheduled_start: e.target.value }))} data-testid="maint-start" />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">End</label>
+                    <input className="form-input" type="datetime-local" value={maintenanceForm.scheduled_end} onChange={e => setMaintenanceForm(f => ({ ...f, scheduled_end: e.target.value }))} data-testid="maint-end" />
+                  </div>
+                </div>
+                <button className="btn btn-primary" onClick={handleScheduleMaintenance} data-testid="schedule-maint-btn">Schedule</button>
               </div>
               {maintenanceWindows.map(mw => (
-                <div key={mw.id} data-testid={`maint-${mw.id}`} style={{ padding: 12, marginBottom: 8, backgroundColor: '#fff3e0', borderRadius: 8 }}>
-                  <div style={{ fontWeight: 600 }}>{mw.title}</div>
-                  <div style={{ fontSize: 13, color: '#555' }}>{mw.description}</div>
-                  <div style={{ fontSize: 12, color: '#888' }}>
-                    {new Date(mw.scheduled_start).toLocaleString()} — {new Date(mw.scheduled_end).toLocaleString()}
+                <div key={mw.id} data-testid={`maint-${mw.id}`} className="card mb-3">
+                  <div className="card-body">
+                    <div className="font-semibold">{mw.title}</div>
+                    <div className="text-sm text-muted mt-1">{mw.description}</div>
+                    <div className="text-xs text-muted mt-1">
+                      {new Date(mw.scheduled_start).toLocaleString()} — {new Date(mw.scheduled_end).toLocaleString()}
+                    </div>
                   </div>
                 </div>
               ))}

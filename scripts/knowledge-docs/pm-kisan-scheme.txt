@@ -1,0 +1,44 @@
+PM-KISAN (Pradhan Mantri Kisan Samman Nidhi) - Complete Guide
+
+OVERVIEW
+PM-KISAN provides direct income support of Rs 6000 per year to all eligible farmer families across India. The financial benefit is transferred in three installments of Rs 2000 each every four months directly into farmer bank accounts via DBT.
+
+ELIGIBILITY
+- All landholding farmer families with cultivable land in their name
+- Small and marginal farmers with land up to 2 hectares
+- Applicable to both individual farmers and joint holding families
+
+WHO IS EXCLUDED
+- Income tax paying farmers
+- Constitutional post holders (current and former)
+- Retired government employees with monthly pension above Rs 10,000
+- Professional registrants (doctors, engineers, lawyers, CAs, architects)
+- Institutional landholders
+- Former and present ministers, state/district panchayat chairpersons, MPs, MLAs
+
+REGISTRATION PROCESS
+1. Visit nearest CSC (Common Service Center) or Kisan Seva Kendra
+2. Register on pmkisan.gov.in portal with Aadhaar number
+3. Provide land ownership documents (Khasra/Khatauni)
+4. Provide bank account number and IFSC code
+5. Get verification done by Patwari/Revenue Officer
+
+DOCUMENTS REQUIRED
+- Aadhaar card (mandatory)
+- Bank passbook or cancelled cheque
+- Land ownership records (Khasra number)
+- Mobile number linked to Aadhaar
+
+INSTALLMENT SCHEDULE
+- April to July (1st installment)
+- August to November (2nd installment)
+- December to March (3rd installment)
+
+STATUS CHECK
+- Visit pmkisan.gov.in Beneficiary Status section
+- Enter Aadhaar or bank account or mobile number
+- Available in Hindi, English, and regional languages
+
+HELPLINE
+- PM-KISAN Helpline: 155261 or 1800-115-526 (toll-free)
+- Email: pmkisan-ict@gov.in

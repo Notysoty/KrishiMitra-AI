@@ -1,10 +1,20 @@
+import webpush from 'web-push';
 import { getPool } from '../../db/pool';
 import { AlertType, AlertPriority, AlertStatus } from '../../types/enums';
 import { Alert, AlertPreferences } from '../../types/alert';
 
+// Configure web-push with VAPID keys from env
+if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+  webpush.setVapidDetails(
+    'mailto:admin@krishimitra.ai',
+    process.env.VAPID_PUBLIC_KEY,
+    process.env.VAPID_PRIVATE_KEY,
+  );
+}
+
 // ── Interfaces ──────────────────────────────────────────────────
 
-export type DeliveryChannel = 'in_app' | 'sms' | 'email';
+export type DeliveryChannel = 'in_app' | 'sms' | 'email' | 'push';
 
 export type DeliveryStatus = 'pending' | 'sent' | 'failed';
 
@@ -79,6 +89,12 @@ export class AlertDeliveryService {
       records.push(record);
     }
 
+    // Web Push — always attempt if VAPID is configured
+    if (process.env.VAPID_PUBLIC_KEY) {
+      const record = await this.deliverWebPush(alert);
+      records.push(record);
+    }
+
     return records;
   }
 
@@ -142,6 +158,62 @@ export class AlertDeliveryService {
         channel: 'email',
         status: 'failed',
         error: err instanceof Error ? err.message : 'Email delivery failed',
+      };
+    }
+  }
+
+  // ── Web Push ─────────────────────────────────────────────────
+
+  /**
+   * Save a Web Push subscription for a user (from browser pushManager.subscribe()).
+   * Stored in push_subscriptions table.
+   */
+  async saveWebPushSubscription(userId: string, subscription: webpush.PushSubscription): Promise<void> {
+    const pool = getPool();
+    await pool.query(
+      `INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth, created_at)
+       VALUES ($1, $2, $3, $4, NOW())
+       ON CONFLICT (endpoint) DO UPDATE SET p256dh = $3, auth = $4`,
+      [userId, subscription.endpoint, subscription.keys.p256dh, subscription.keys.auth],
+    );
+  }
+
+  async deliverWebPush(alert: Alert): Promise<DeliveryRecord> {
+    try {
+      const pool = getPool();
+      const result = await pool.query(
+        'SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE user_id = $1',
+        [alert.user_id],
+      );
+
+      if (result.rows.length === 0) {
+        return { alert_id: alert.id, channel: 'push', status: 'pending' };
+      }
+
+      const payload = JSON.stringify({
+        title: alert.title,
+        body: alert.message,
+        icon: '/logo.svg',
+        badge: '/logo.svg',
+        data: { alertId: alert.id, type: alert.type },
+      });
+
+      await Promise.allSettled(
+        result.rows.map((row) =>
+          webpush.sendNotification(
+            { endpoint: row.endpoint as string, keys: { p256dh: row.p256dh as string, auth: row.auth as string } },
+            payload,
+          ),
+        ),
+      );
+
+      return { alert_id: alert.id, channel: 'push', status: 'sent', sent_at: new Date() };
+    } catch (err) {
+      return {
+        alert_id: alert.id,
+        channel: 'push',
+        status: 'failed',
+        error: err instanceof Error ? err.message : 'Push delivery failed',
       };
     }
   }

@@ -1,0 +1,71 @@
+ICAR Integrated Pest Management (IPM) Guidelines for Indian Crops
+
+INTRODUCTION TO IPM
+IPM is an ecosystem-based strategy focusing on long-term prevention of pests through biological control, habitat manipulation, and resistant varieties. Pesticides are used only as a last resort.
+
+IPM PRINCIPLES
+1. Prevention: Use certified disease-free seed; resistant varieties
+2. Monitoring: Scouting fields regularly (economic threshold level - ETL)
+3. Biological control: Conserve and release natural enemies
+4. Cultural practices: Crop rotation, intercropping, sanitation
+5. Chemical control: Only when ETL is exceeded; prefer selective pesticides
+
+ECONOMIC THRESHOLD LEVELS (ETL)
+Rice:
+- Brown Planthopper: 10 nymphs/tiller or 20 BPH/hill
+- Stem Borer: 25% dead hearts in vegetative; 10% white ears at reproductive stage
+- Leaf Folder: 20% folded leaves
+
+Wheat:
+- Aphids: 25-30 aphids/ear
+- Yellow Rust: First pustule appearance in field triggers action
+
+Tomato:
+- Fruit Borer: 5% fruit damage or 1 larva/plant
+- Whitefly: 5 adults/leaf
+
+Cotton:
+- Bollworms: 5-8% damaged bolls
+
+BIOLOGICAL CONTROL AGENTS
+1. Trichogramma japonicum: Egg parasitoid for stem borer in rice; release 1,00,000/ha
+2. Chrysoperla carnea: Predator of aphids, whitefly, thrips; release 50,000/ha
+3. NPV (Nucleopolyhedrovirus): For cotton bollworm; 250 LE/ha
+4. Beauveria bassiana: For whitefly, thrips; spray 5g/liter water
+5. Trichoderma viride: Soil fungicide; seed treatment 4g/kg seed
+
+PHEROMONE TRAPS
+- American Bollworm: Helilure traps (5/ha)
+- Fruit Borer (Tomato): Pheromone traps (5/ha)
+- Change lures every 4-6 weeks
+- Check traps daily and record catches
+
+BOTANICALS AND BIOPESTICIDES
+- Neem oil (1500 ppm): 3ml/liter for sucking pests
+- Azadirachtin 0.03% solution for young larvae
+- NSKE (Neem Seed Kernel Extract) 5% solution spray
+
+SAFE PESTICIDE USAGE
+- Always read label before use
+- Use protective gear: mask, gloves, goggles, full-body suit
+- Follow pre-harvest interval (PHI) strictly
+- Do not mix incompatible chemicals
+- Store in original container, locked away from children
+- Dispose empty containers safely
+
+PESTICIDE RESISTANCE MANAGEMENT
+Rotate between different chemical groups:
+- Organophosphates: Chlorpyriphos, Dimethoate
+- Pyrethroids: Cypermethrin, Lambda-cyhalothrin
+- Neonicotinoids: Imidacloprid, Thiamethoxam
+- Diamides: Chlorantraniliprole
+
+WATER QUALITY AND SPRAY TIMING
+- Use clean water for spraying; hard water reduces efficacy
+- Spray early morning or late evening (avoid noon heat)
+- Wind speed below 15 km/hr for spraying
+- Do not spray before rain forecast
+
+HELPLINE
+KVK (Krishi Vigyan Kendra): Find nearest KVK at icar.gov.in
+ICAR Crop Protection Division: +91-11-25843375

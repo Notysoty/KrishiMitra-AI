@@ -9,115 +9,95 @@ function formatINR(amount: number): string {
   return `₹${amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-const volatilityColors: Record<string, string> = {
-  high: '#c62828',
-  medium: '#f9a825',
-  low: '#2e7d32',
+const volatilityBadge: Record<string, string> = {
+  high: 'badge badge-red',
+  medium: 'badge badge-yellow',
+  low: 'badge badge-green',
 };
 
 export const MarketRecommendations: React.FC<Props> = ({ recommendations }) => {
   if (recommendations.length === 0) {
-    return <div data-testid="no-recommendations">No market recommendations available.</div>;
+    return <div data-testid="no-recommendations" className="empty-state"><span className="empty-icon">📋</span><span className="empty-text">No market recommendations available.</span></div>;
   }
 
   return (
-    <div data-testid="market-recommendations" style={{ padding: 16 }}>
-      <h3>Market Recommendations</h3>
-      <p style={{ fontSize: 12, color: '#666', marginBottom: 12 }}>
-        Markets ranked by estimated net profit
-      </p>
+    <div data-testid="market-recommendations" className="flex flex-col gap-3">
+      <div className="card-header">
+        <h3>🏪 Market Recommendations</h3>
+        <span className="text-xs text-muted">Markets ranked by estimated net profit</span>
+      </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {recommendations.map((rec, idx) => (
-          <div
-            key={rec.market_name}
-            data-testid={`recommendation-${idx}`}
-            style={{
-              border: '1px solid #e0e0e0',
-              borderRadius: 8,
-              padding: 12,
-              backgroundColor: idx === 0 ? '#e8f5e9' : '#fff',
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      {recommendations.map((rec, idx) => (
+        <div
+          key={rec.market_name}
+          data-testid={`recommendation-${idx}`}
+          className={`card ${idx === 0 ? '' : ''}`}
+          style={idx === 0 ? { borderColor: 'var(--primary-light)', background: 'var(--success-light)' } : {}}
+        >
+          <div className="card-body">
+            <div className="flex items-center justify-between">
               <div>
-                <span style={{ fontWeight: 600, fontSize: 15 }}>
+                <span className="font-semibold" style={{ fontSize: '0.9375rem' }}>
                   {idx + 1}. {rec.market_name}
                 </span>
                 {idx === 0 && (
-                  <span style={{ marginLeft: 8, fontSize: 11, color: '#2e7d32', fontWeight: 600 }}>
+                  <span className="badge badge-green" style={{ marginLeft: 8 }}>
                     ★ Best Option
                   </span>
                 )}
               </div>
               <span
                 data-testid={`rec-volatility-${idx}`}
-                style={{
-                  padding: '2px 8px',
-                  borderRadius: 8,
-                  fontSize: 11,
-                  fontWeight: 600,
-                  color: '#fff',
-                  backgroundColor: volatilityColors[rec.volatility],
-                }}
+                className={volatilityBadge[rec.volatility]}
               >
                 {rec.volatility.charAt(0).toUpperCase() + rec.volatility.slice(1)} Volatility
               </span>
             </div>
 
-            <div style={{ display: 'flex', gap: 16, marginTop: 8, fontSize: 13 }}>
-              <div>
-                <div style={{ color: '#666' }}>Price</div>
-                <div style={{ fontWeight: 600 }}>{formatINR(rec.price)}/kg</div>
+            <div className="stat-grid mt-3">
+              <div className="stat-card" style={{ background: 'var(--gray-50)', border: '1px solid var(--gray-200)', borderRadius: 'var(--radius-md)' }}>
+                <div className="stat-label">Price</div>
+                <div className="stat-value" style={{ fontSize: '1rem' }}>{formatINR(rec.price)}/kg</div>
               </div>
-              <div>
-                <div style={{ color: '#666' }}>Distance</div>
-                <div style={{ fontWeight: 600 }}>{rec.distance}km</div>
+              <div className="stat-card" style={{ background: 'var(--gray-50)', border: '1px solid var(--gray-200)', borderRadius: 'var(--radius-md)' }}>
+                <div className="stat-label">Distance</div>
+                <div className="stat-value" style={{ fontSize: '1rem' }}>{rec.distance}km</div>
               </div>
-              <div>
-                <div style={{ color: '#666' }}>Transport Cost</div>
-                <div style={{ fontWeight: 600 }}>{formatINR(rec.transport_cost)}</div>
+              <div className="stat-card" style={{ background: 'var(--gray-50)', border: '1px solid var(--gray-200)', borderRadius: 'var(--radius-md)' }}>
+                <div className="stat-label">Transport Cost</div>
+                <div className="stat-value" style={{ fontSize: '1rem' }}>{formatINR(rec.transport_cost)}</div>
               </div>
-              <div>
-                <div style={{ color: '#666' }}>Net Profit</div>
-                <div data-testid={`net-profit-${idx}`} style={{ fontWeight: 600, color: '#2e7d32' }}>
+              <div className="stat-card" style={{ background: 'var(--success-light)', border: '1px solid var(--primary-light)', borderRadius: 'var(--radius-md)' }}>
+                <div className="stat-label">Net Profit</div>
+                <div data-testid={`net-profit-${idx}`} className="stat-value" style={{ fontSize: '1rem', color: 'var(--primary-700)' }}>
                   {formatINR(rec.net_profit)}/kg
                 </div>
               </div>
             </div>
 
             {rec.distance > 100 && (
-              <div data-testid={`distance-warning-${idx}`} role="alert" style={{ marginTop: 8, padding: '6px 10px', backgroundColor: '#fff3e0', borderRadius: 6, fontSize: 12, color: '#e65100' }}>
+              <div data-testid={`distance-warning-${idx}`} role="alert" className="alert-box alert-warning mt-3">
                 ⚠️ Long distance may increase transportation costs and crop spoilage risk
               </div>
             )}
 
-            <div data-testid={`explanation-${idx}`} style={{ marginTop: 8, fontSize: 12, color: '#555' }}>
+            <div data-testid={`explanation-${idx}`} className="text-sm text-muted mt-3">
               {rec.explanation}
             </div>
 
-            <div data-testid={`top-factors-${idx}`} style={{ marginTop: 6 }}>
-              <div style={{ fontSize: 11, color: '#888', marginBottom: 2 }}>Top Factors:</div>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            <div data-testid={`top-factors-${idx}`} className="mt-2">
+              <div className="text-xs text-muted mb-2">Top Factors:</div>
+              <div className="flex gap-2" style={{ flexWrap: 'wrap' }}>
                 {rec.top_factors.map((factor, fi) => (
-                  <span
-                    key={fi}
-                    style={{
-                      padding: '2px 8px',
-                      borderRadius: 12,
-                      fontSize: 11,
-                      backgroundColor: '#e3f2fd',
-                      color: '#1565c0',
-                    }}
-                  >
+                  <span key={fi} className="badge badge-blue">
                     {factor}
                   </span>
                 ))}
               </div>
             </div>
           </div>
-        ))}
-      </div>
+        </div>
+      ))}
     </div>
   );
 };

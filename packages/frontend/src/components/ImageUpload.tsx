@@ -37,15 +37,12 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({ onClassification }) =>
     const url = URL.createObjectURL(file);
     setPreview(url);
 
-    // Check image quality
     try {
       const quality = await checkImageQuality(file);
       if (!quality.acceptable) {
         setQualityWarning(quality.message || 'Please retake the photo with better lighting and focus on the affected area');
       }
-    } catch {
-      // Continue even if quality check fails
-    }
+    } catch { /* continue if quality check fails */ }
 
     setLoading(true);
 
@@ -58,16 +55,6 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({ onClassification }) =>
     } finally {
       setLoading(false);
     }
-  };
-
-  const btnStyle: React.CSSProperties = {
-    padding: '6px 12px',
-    borderRadius: '6px',
-    border: '1px solid #ccc',
-    cursor: 'pointer',
-    backgroundColor: '#fff',
-    fontSize: '14px',
-    marginRight: '8px',
   };
 
   return (
@@ -89,35 +76,37 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({ onClassification }) =>
         data-testid="camera-input"
         onChange={(e) => handleFile(e.target.files?.[0])}
       />
-      <button style={btnStyle} onClick={() => fileRef.current?.click()} data-testid="upload-btn">
-        📁 Upload Image
-      </button>
-      <button style={btnStyle} onClick={() => cameraRef.current?.click()} data-testid="camera-btn">
-        📷 Camera
-      </button>
+      <div style={{ display: 'flex', gap: '8px' }}>
+        <button className={`btn btn-secondary btn-sm ${loading ? 'btn-loading' : ''}`} onClick={() => fileRef.current?.click()} disabled={loading} data-testid="upload-btn">
+          {loading && <span className="btn-spinner" />}{loading ? 'Classifying...' : '📁 Upload Image'}
+        </button>
+        <button className={`btn btn-secondary btn-sm ${loading ? 'btn-loading' : ''}`} onClick={() => cameraRef.current?.click()} disabled={loading} data-testid="camera-btn">
+          {loading && <span className="btn-spinner" />}{loading ? 'Classifying...' : '📷 Camera'}
+        </button>
+      </div>
 
       {error && (
-        <div data-testid="upload-error" style={{ color: '#c62828', marginTop: '8px', fontSize: '13px' }}>
+        <div data-testid="upload-error" className="form-error" style={{ marginTop: '8px' }}>
           {error}
         </div>
       )}
 
       {qualityWarning && (
-        <div data-testid="quality-warning" style={{ marginTop: '8px', padding: '6px 10px', backgroundColor: '#fff3e0', borderRadius: '6px', fontSize: '12px', color: '#e65100' }}>
+        <div data-testid="quality-warning" className="alert-box alert-warning" style={{ marginTop: '8px' }}>
           ⚠️ {qualityWarning}
         </div>
       )}
 
       {preview && (
         <div style={{ marginTop: '8px' }}>
-          <img data-testid="image-preview" src={preview} alt="preview" style={{ maxWidth: '200px', borderRadius: '8px' }} />
+          <img data-testid="image-preview" src={preview} alt="preview" style={{ maxWidth: '200px', borderRadius: 'var(--radius-md)' }} />
         </div>
       )}
 
-      {loading && <div data-testid="upload-loading" style={{ marginTop: '8px' }}>Classifying...</div>}
+      {loading && <div data-testid="upload-loading" className="loading-spinner" style={{ justifyContent: 'flex-start', padding: '12px 0' }}>Classifying...</div>}
 
       {result && (
-        <div data-testid="classification-result" style={{ marginTop: '8px', padding: '8px', backgroundColor: '#f5f5f5', borderRadius: '8px' }}>
+        <div data-testid="classification-result" className="classification-card">
           <div><strong>Disease:</strong> {result.diseaseName}</div>
           <div><strong>Confidence:</strong> {Math.round(result.confidence * 100)}%</div>
           <div style={{ marginTop: '4px' }}>

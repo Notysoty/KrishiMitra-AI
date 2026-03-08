@@ -4,20 +4,22 @@ import hi from './translations/hi';
 import ta from './translations/ta';
 import te from './translations/te';
 import kn from './translations/kn';
+import mr from './translations/mr';
 
-export type Language = 'en' | 'hi' | 'ta' | 'te' | 'kn';
+export type Language = 'en' | 'hi' | 'ta' | 'te' | 'kn' | 'mr';
 export type TranslationKeys = keyof typeof en;
 export type Translations = Record<TranslationKeys, string>;
 
 export const SUPPORTED_LANGUAGES: { code: Language; name: string; nativeName: string }[] = [
   { code: 'en', name: 'English', nativeName: 'English' },
   { code: 'hi', name: 'Hindi', nativeName: 'हिन्दी' },
+  { code: 'mr', name: 'Marathi', nativeName: 'मराठी' },
   { code: 'ta', name: 'Tamil', nativeName: 'தமிழ்' },
   { code: 'te', name: 'Telugu', nativeName: 'తెలుగు' },
   { code: 'kn', name: 'Kannada', nativeName: 'ಕನ್ನಡ' },
 ];
 
-const translationsMap: Record<Language, Translations> = { en, hi, ta, te, kn };
+const translationsMap: Record<Language, Translations> = { en, hi, mr, ta, te, kn };
 
 const STORAGE_KEY = 'krishimitra_language';
 

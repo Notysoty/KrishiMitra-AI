@@ -5,10 +5,16 @@ interface Props {
   data: WaterEfficiencyData | null;
 }
 
-const ratingColors: Record<string, string> = {
-  'High Efficiency': '#2e7d32',
-  'Medium Efficiency': '#f9a825',
-  'Low Efficiency': '#c62828',
+const ratingBadgeClass: Record<string, string> = {
+  'High Efficiency': 'badge badge-green',
+  'Medium Efficiency': 'badge badge-yellow',
+  'Low Efficiency': 'badge badge-red',
+};
+
+const ratingBarColor: Record<string, string> = {
+  'High Efficiency': 'var(--primary)',
+  'Medium Efficiency': 'var(--warning)',
+  'Low Efficiency': 'var(--danger)',
 };
 
 function formatDate(iso: string): string {
@@ -18,8 +24,9 @@ function formatDate(iso: string): string {
 export const WaterEfficiencyDisplay: React.FC<Props> = ({ data }) => {
   if (!data) {
     return (
-      <div data-testid="water-efficiency-unavailable" style={{ padding: 16, color: '#888' }}>
-        Water efficiency data is currently unavailable.
+      <div data-testid="water-efficiency-unavailable" className="empty-state">
+        <div className="empty-icon">💧</div>
+        <div className="empty-text">Water efficiency data is currently unavailable.</div>
       </div>
     );
   }
@@ -31,45 +38,38 @@ export const WaterEfficiencyDisplay: React.FC<Props> = ({ data }) => {
   const benchMaxPercent = (benchmark_range.max / maxVal) * 100;
 
   return (
-    <div data-testid="water-efficiency-display" style={{ padding: 16 }}>
-      <h3>Water Efficiency</h3>
+    <div data-testid="water-efficiency-display" className="card-body">
+      <h3>💧 Water Efficiency</h3>
 
-      <div data-testid="water-last-updated" style={{ fontSize: 12, color: '#666', marginBottom: 8 }}>
+      <div data-testid="water-last-updated" style={{ fontSize: '0.75rem', color: 'var(--gray-500)', marginBottom: 8, marginTop: 4 }}>
         Last Updated: {formatDate(last_updated)}
       </div>
 
-      <div data-testid="water-rating" style={{
-        display: 'inline-block', padding: '4px 12px', borderRadius: 12,
-        fontWeight: 600, fontSize: 14, color: '#fff',
-        backgroundColor: ratingColors[rating] || '#666',
-      }}>
+      <div data-testid="water-rating" className={ratingBadgeClass[rating] || 'badge badge-gray'}>
         {rating}
       </div>
 
-      <div data-testid="water-confidence" style={{ fontSize: 12, color: '#888', marginTop: 4 }}>
+      <div data-testid="water-confidence" className="badge badge-gray" style={{ marginLeft: 8 }}>
         Confidence: {confidence.charAt(0).toUpperCase() + confidence.slice(1)}
       </div>
 
-      <div data-testid="water-explanation" style={{ marginTop: 12, fontSize: 13, color: '#333', lineHeight: 1.5 }}>
+      <div data-testid="water-explanation" style={{ marginTop: 16, fontSize: '0.8125rem', color: 'var(--gray-700)', lineHeight: 1.6 }}>
         {explanation}
       </div>
 
-      {/* Visual bar chart */}
-      <div data-testid="water-chart" style={{ marginTop: 16 }}>
-        <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 4 }}>Usage vs Benchmark</div>
-        <div style={{ position: 'relative', height: 32, backgroundColor: '#e0e0e0', borderRadius: 4 }}>
-          {/* Benchmark range */}
+      <div data-testid="water-chart" style={{ marginTop: 20 }}>
+        <div style={{ fontSize: '0.75rem', fontWeight: 600, marginBottom: 6, color: 'var(--gray-600)' }}>Usage vs Benchmark</div>
+        <div className="progress-bar" style={{ height: 32, position: 'relative' }}>
           <div style={{
             position: 'absolute', left: `${benchMinPercent}%`, width: `${benchMaxPercent - benchMinPercent}%`,
-            height: '100%', backgroundColor: '#c8e6c9', borderRadius: 4, opacity: 0.7,
+            height: '100%', backgroundColor: 'var(--primary-100)', borderRadius: 'var(--radius-full)', opacity: 0.7,
           }} />
-          {/* Usage bar */}
-          <div style={{
+          <div className="progress-fill" style={{
             position: 'absolute', left: 0, width: `${usagePercent}%`, height: '100%',
-            backgroundColor: ratingColors[rating] || '#1976d2', borderRadius: 4, opacity: 0.8,
+            background: ratingBarColor[rating] || 'var(--accent)',
           }} />
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#888', marginTop: 2 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6875rem', color: 'var(--gray-500)', marginTop: 4 }}>
           <span>0</span>
           <span>Your usage: {liters_per_hectare.toLocaleString('en-IN')} L/ha</span>
           <span>Benchmark: {benchmark_range.min.toLocaleString('en-IN')}-{benchmark_range.max.toLocaleString('en-IN')} L/ha</span>
@@ -77,9 +77,9 @@ export const WaterEfficiencyDisplay: React.FC<Props> = ({ data }) => {
       </div>
 
       {conservation_tips && conservation_tips.length > 0 && (
-        <div data-testid="conservation-tips" style={{ marginTop: 16, padding: 12, backgroundColor: '#e8f5e9', borderRadius: 8 }}>
-          <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 6 }}>💧 Water Conservation Tips</div>
-          <ul style={{ margin: 0, paddingLeft: 20, fontSize: 13 }}>
+        <div data-testid="conservation-tips" className="alert-box alert-success" style={{ marginTop: 20, flexDirection: 'column' }}>
+          <div style={{ fontWeight: 600, fontSize: '0.8125rem', marginBottom: 6 }}>💧 Water Conservation Tips</div>
+          <ul style={{ margin: 0, paddingLeft: 20, fontSize: '0.8125rem' }}>
             {conservation_tips.map((tip, i) => <li key={i} style={{ marginBottom: 4 }}>{tip}</li>)}
           </ul>
         </div>

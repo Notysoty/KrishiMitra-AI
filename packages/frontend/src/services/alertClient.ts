@@ -49,7 +49,6 @@ async function alertFetch(path: string, options: RequestInit = {}): Promise<Resp
       headers['Authorization'] = `Bearer ${refreshed.token}`;
       return fetch(`${BASE_URL}${path}`, { ...options, headers });
     }
-    window.location.href = '/login';
     throw new Error('Unauthorized');
   }
 

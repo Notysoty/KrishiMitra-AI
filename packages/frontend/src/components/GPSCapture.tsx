@@ -58,17 +58,17 @@ export const GPSCapture: React.FC<GPSCaptureProps> = ({ onCapture, value }) => {
   }, [onCapture]);
 
   return (
-    <div data-testid="gps-capture">
-      <button onClick={handleCapture} disabled={loading} type="button" data-testid="gps-button">
-        {loading ? 'Getting location...' : 'Use GPS'}
+    <div data-testid="gps-capture" className="flex items-center gap-2">
+      <button className={`btn btn-secondary ${loading ? 'btn-loading' : ''}`} onClick={handleCapture} disabled={loading} type="button" data-testid="gps-button">
+        {loading && <span className="btn-spinner" />}{loading ? 'Getting location...' : '📍 Use GPS'}
       </button>
       {value && (
-        <span data-testid="gps-coords" style={{ marginLeft: 8 }}>
+        <span data-testid="gps-coords" className="badge badge-green">
           Lat: {value.latitude.toFixed(4)}, Lng: {value.longitude.toFixed(4)}
         </span>
       )}
       {error && (
-        <span data-testid="gps-error" role="alert" style={{ color: 'red', marginLeft: 8 }}>
+        <span data-testid="gps-error" role="alert" className="form-error">
           {error}
         </span>
       )}

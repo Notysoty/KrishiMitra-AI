@@ -1,0 +1,69 @@
+Wheat Cultivation Guide - Rabi Crop (India)
+
+RECOMMENDED VARIETIES
+- HD-2967: Most popular, widely adapted across North India
+- PBW-343: Punjab, Haryana, Western Uttar Pradesh
+- GW-322: Gujarat, Rajasthan
+- K-9107: Eastern UP, Bihar, West Bengal
+- HD-3086 (Pusa Malav Kiran): Heat tolerant, for late sowing
+
+CLIMATE
+- Temperature during grain filling: 12-25 degrees C
+- Cool weather required during vegetative phase
+- Avoid frost at booting stage
+- Requires 100-200mm rainfall or equivalent irrigation
+
+SOWING TIME
+- Timely sowing (North India): 1-25 November
+- Late sowing: 25 November to 10 December (use heat-tolerant varieties)
+- Very late sowing: After 25 December (yield loss 0.5% per day delay)
+
+SEED RATE
+- Timely sowing: 100-125 kg/ha
+- Late sowing: 125-150 kg/ha
+- Seed treatment: Thiram 2.5g/kg plus Carbendazim 1g/kg
+
+FERTILIZER REQUIREMENTS
+- Timely sowing (irrigated): 120 kg N, 60 kg P, 40 kg K per hectare
+- Late sowing: 80 kg N, 40 kg P, 30 kg K per hectare
+- Zinc deficiency common: Apply ZnSO4 25 kg/ha as basal dose
+- Application: Half N plus all P plus K as basal; remaining N at first irrigation
+
+IRRIGATION
+- Critical stages: Crown Root Initiation (21 days), Tillering, Jointing, Booting, Ear emergence, Milky grain stage
+- Total water requirement: 400-500mm
+- Number of irrigations: 4-6 depending on soil type
+
+COMMON DISEASES
+1. Yellow Rust (Puccinia striiformis)
+   - Yellow stripes on leaves parallel to midrib
+   - Spreads rapidly in cool humid weather
+   - Management: Propiconazole 25EC at 1ml/liter, Tebuconazole
+
+2. Brown Rust (Puccinia recondita)
+   - Orange-brown pustules randomly on leaves
+   - Management: Mancozeb, Propiconazole
+
+3. Loose Smut (Ustilago tritici)
+   - Black powder replacing grain
+   - Management: Seed treatment with Carboxin plus Thiram
+
+COMMON PESTS
+1. Aphids (Sitobion avenae)
+   - Major pest; sucks sap from flag leaf
+   - Management: Dimethoate 30EC at 2ml/liter; natural predators (ladybird beetles)
+
+2. Army Worm
+   - Damages flag leaf
+   - Management: Chlorpyriphos 20EC at 2ml/liter
+
+HARVESTING
+- Harvest when moisture content is 14-18%
+- Use combine harvester to reduce losses
+- Average yield (irrigated): 4-5 tonnes/ha
+- Maximum potential: 6-7 tonnes/ha
+
+POST-HARVEST STORAGE
+- Dry grain to 12% moisture before storage
+- Use airtight bins or hermetic bags to prevent weevil damage
+- Check government MSP (Minimum Support Price) before selling

@@ -1,5 +1,6 @@
 import { BaseRepository } from '../../db/BaseRepository';
 import { MarketPrice, VolatilityLevel } from '../../types';
+import { AgmarknetClient } from './AgmarknetClient';
 
 // ── Constants ───────────────────────────────────────────────────
 
@@ -189,6 +190,7 @@ export class MarketService extends BaseRepository {
     string,
     ReturnType<typeof generateSyntheticPrices>
   >();
+  private agmarknet = new AgmarknetClient();
 
   constructor() {
     super('market_prices');
@@ -202,13 +204,21 @@ export class MarketService extends BaseRepository {
     tenantId: string,
     crop?: string,
   ): Promise<MarketPricesResult> {
-    // Try DB first
+    // 1. Try DB first
     const dbPrices = await this.fetchFromDB(tenantId, crop);
     if (dbPrices.length > 0) {
       return this.buildPricesResult(dbPrices);
     }
 
-    // Fallback to synthetic data
+    // 2. Try real Agmarknet API
+    if (this.agmarknet.isConfigured() && crop) {
+      const livePrices = await this.agmarknet.fetchPrices(crop);
+      if (livePrices.length > 0) {
+        return this.buildAgmarknetPricesResult(livePrices, crop);
+      }
+    }
+
+    // 3. Fallback to synthetic data
     const crops = crop ? [crop] : Object.keys(DEFAULT_CROPS);
     const allEntries: ReturnType<typeof generateSyntheticPrices> = [];
 
@@ -303,6 +313,49 @@ export class MarketService extends BaseRepository {
     const data = generateSyntheticPrices(crop, config.markets, config.basePrice);
     this.syntheticCache.set(crop, data);
     return data;
+  }
+
+  private buildAgmarknetPricesResult(
+    livePrices: import('./AgmarknetClient').AgmarknetPrice[],
+    crop: string,
+  ): MarketPricesResult {
+    const now = new Date();
+    const latestDate = livePrices.reduce(
+      (latest, p) => (p.date > latest ? p.date : latest),
+      livePrices[0].date,
+    );
+    const staleWarning = getStaleWarning(latestDate);
+
+    // Deduplicate by market (keep latest)
+    const byMarket = new Map<string, typeof livePrices[0]>();
+    for (const p of livePrices) {
+      const existing = byMarket.get(p.marketName);
+      if (!existing || p.date > existing.date) byMarket.set(p.marketName, p);
+    }
+
+    const allPriceValues = livePrices.map((p) => p.pricePerKg);
+
+    const prices: MarketPriceResponse[] = Array.from(byMarket.values()).map((p) => ({
+      id: `agmarknet-${p.marketName}-${crop}-${p.date.toISOString().split('T')[0]}`,
+      market_name: `${p.marketName} (${p.district}, ${p.state})`,
+      crop,
+      price: p.pricePerKg,
+      unit: 'per kg',
+      date: p.date.toISOString(),
+      source: 'Source: Agmarknet / data.gov.in',
+      location: { latitude: 20.5937, longitude: 78.9629 },
+      volatility: calculateVolatility(allPriceValues),
+      formatted_price: formatINR(p.pricePerKg),
+      last_updated: `Last Updated: ${now.toISOString()}`,
+      stale_warning: staleWarning,
+    }));
+
+    return {
+      prices,
+      source: 'Source: Agmarknet / data.gov.in (Live)',
+      last_updated: `Last Updated: ${latestDate.toISOString()}`,
+      stale_warning: staleWarning,
+    };
   }
 
   private buildPricesResult(

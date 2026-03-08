@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { searchAuditLogs, exportAuditLogs, AuditLogEntry, AuditFilter } from '../services/adminClient';
+import { useTranslation } from '../i18n';
 
 export const AuditLogPage: React.FC = () => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [logs, setLogs] = useState<AuditLogEntry[]>([]);
@@ -34,64 +36,94 @@ export const AuditLogPage: React.FC = () => {
     } catch { setError('Failed to export audit logs.'); }
   };
 
-  const containerStyle: React.CSSProperties = { maxWidth: 900, margin: '0 auto', fontFamily: 'sans-serif' };
-  const headerStyle: React.CSSProperties = { padding: '12px 16px', backgroundColor: '#37474f', color: '#fff', fontWeight: 600, fontSize: 18 };
-  const inputStyle: React.CSSProperties = { padding: '6px 10px', border: '1px solid #ccc', borderRadius: 4, fontSize: 13, marginRight: 8, marginBottom: 8 };
-  const btnStyle: React.CSSProperties = { padding: '6px 16px', backgroundColor: '#37474f', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 13 };
-
   return (
-    <div style={containerStyle} data-testid="audit-log-page">
-      <div style={headerStyle}>Audit Log Viewer</div>
+    <div className="page-container fade-in" data-testid="audit-log-page">
+      <div className="section-header-light">📋 {t('auditLogViewer')}</div>
 
-      <div style={{ padding: 16 }}>
-        <div data-testid="audit-filters" style={{ marginBottom: 16, padding: 12, backgroundColor: '#f5f5f5', borderRadius: 8 }}>
-          <div style={{ fontWeight: 600, marginBottom: 8 }}>Search & Filter</div>
-          <input style={inputStyle} placeholder="Action type" value={filter.action || ''} onChange={e => setFilter(f => ({ ...f, action: e.target.value || undefined }))} data-testid="filter-action" />
-          <input style={inputStyle} placeholder="User ID" value={filter.userId || ''} onChange={e => setFilter(f => ({ ...f, userId: e.target.value || undefined }))} data-testid="filter-user-id" />
-          <input style={inputStyle} placeholder="Resource type" value={filter.resourceType || ''} onChange={e => setFilter(f => ({ ...f, resourceType: e.target.value || undefined }))} data-testid="filter-resource-type" />
-          <input style={inputStyle} type="date" value={filter.startDate || ''} onChange={e => setFilter(f => ({ ...f, startDate: e.target.value || undefined }))} data-testid="filter-start-date" />
-          <input style={inputStyle} type="date" value={filter.endDate || ''} onChange={e => setFilter(f => ({ ...f, endDate: e.target.value || undefined }))} data-testid="filter-end-date" />
-          <label style={{ fontSize: 13, marginRight: 12 }}>
+      <div className="mt-4">
+        <div className="filter-bar" data-testid="audit-filters">
+          <input className="filter-input" placeholder="Action type" value={filter.action || ''} onChange={e => setFilter(f => ({ ...f, action: e.target.value || undefined }))} data-testid="filter-action" />
+          <input className="filter-input" placeholder="User ID" value={filter.userId || ''} onChange={e => setFilter(f => ({ ...f, userId: e.target.value || undefined }))} data-testid="filter-user-id" />
+          <input className="filter-input" placeholder="Resource type" value={filter.resourceType || ''} onChange={e => setFilter(f => ({ ...f, resourceType: e.target.value || undefined }))} data-testid="filter-resource-type" />
+          <input className="filter-input" type="date" value={filter.startDate || ''} onChange={e => setFilter(f => ({ ...f, startDate: e.target.value || undefined }))} data-testid="filter-start-date" />
+          <input className="filter-input" type="date" value={filter.endDate || ''} onChange={e => setFilter(f => ({ ...f, endDate: e.target.value || undefined }))} data-testid="filter-end-date" />
+          <label className="text-sm flex items-center gap-1">
             <input type="checkbox" checked={filter.suspicious || false} onChange={e => setFilter(f => ({ ...f, suspicious: e.target.checked || undefined }))} data-testid="filter-suspicious" />
-            {' '}Suspicious only
+            Suspicious only
           </label>
-          <button style={btnStyle} onClick={loadLogs} data-testid="search-btn">Search</button>
-          <button style={{ ...btnStyle, marginLeft: 8, backgroundColor: '#1565c0' }} onClick={handleExport} data-testid="export-csv-btn">Export CSV</button>
+          <button className="btn btn-primary btn-sm" onClick={loadLogs} data-testid="search-btn">Search</button>
+          <button className="btn btn-accent btn-sm" onClick={handleExport} data-testid="export-csv-btn">Export CSV</button>
         </div>
 
-        {loading && <div data-testid="loading-indicator" style={{ padding: 24, textAlign: 'center', color: '#666' }}>Loading...</div>}
-        {error && <div data-testid="error-message" role="alert" style={{ padding: '8px 16px', backgroundColor: '#ffebee', color: '#c62828', fontSize: 13 }}>{error}</div>}
+        {loading && <div data-testid="loading-indicator" className="p-4"><div className="skeleton-heading mb-3" /><div className="skeleton-line" /><div className="skeleton-line medium" /><div className="skeleton-line short" /></div>}
+        {error && <div data-testid="error-message" role="alert" className="alert-box alert-error">{error}</div>}
 
         {!loading && !error && (
           <div>
-            <div style={{ fontSize: 13, color: '#666', marginBottom: 8 }} data-testid="log-count">Showing {logs.length} of {total} entries</div>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }} data-testid="audit-table">
-              <thead>
-                <tr style={{ borderBottom: '2px solid #e0e0e0', textAlign: 'left' }}>
-                  <th style={{ padding: 8 }}>Timestamp</th>
-                  <th style={{ padding: 8 }}>User</th>
-                  <th style={{ padding: 8 }}>Action</th>
-                  <th style={{ padding: 8 }}>Resource</th>
-                  <th style={{ padding: 8 }}>Details</th>
-                  <th style={{ padding: 8 }}>Flags</th>
-                </tr>
-              </thead>
-              <tbody>
-                {logs.map(log => (
-                  <tr key={log.id} data-testid={`log-row-${log.id}`} style={{ borderBottom: '1px solid #eee', backgroundColor: log.is_suspicious ? '#fff3e0' : 'transparent' }}>
-                    <td style={{ padding: 8 }}>{new Date(log.timestamp).toLocaleString()}</td>
-                    <td style={{ padding: 8 }}>{log.user_name}</td>
-                    <td style={{ padding: 8 }}>{log.action}</td>
-                    <td style={{ padding: 8 }}>{log.resource_type}/{log.resource_id}</td>
-                    <td style={{ padding: 8 }}>{log.details}</td>
-                    <td style={{ padding: 8 }}>
-                      {log.is_sensitive && <span data-testid={`sensitive-${log.id}`} style={{ color: '#e65100', marginRight: 4 }}>🔒</span>}
-                      {log.is_suspicious && <span data-testid={`suspicious-${log.id}`} style={{ color: '#c62828' }}>⚠️</span>}
-                    </td>
+            <div className="text-sm text-muted mb-2" data-testid="log-count">Showing {logs.length} of {total} entries</div>
+            <div className="card">
+              <table className="data-table" data-testid="audit-table">
+                <thead>
+                  <tr>
+                    <th>Timestamp</th>
+                    <th>User</th>
+                    <th>Action</th>
+                    <th>Resource</th>
+                    <th>Details</th>
+                    <th>Flags</th>
                   </tr>
+                </thead>
+                <tbody>
+                  {logs.map(log => (
+                    <tr key={log.id} data-testid={`log-row-${log.id}`} style={log.is_suspicious ? { background: 'var(--warning-light)' } : undefined}>
+                      <td>{new Date(log.timestamp).toLocaleString()}</td>
+                      <td>{log.user_name}</td>
+                      <td>{log.action}</td>
+                      <td>{log.resource_type}/{log.resource_id}</td>
+                      <td>{log.details}</td>
+                      <td>
+                        {log.is_sensitive && <span data-testid={`sensitive-${log.id}`} style={{ marginRight: 4 }}>🔒</span>}
+                        {log.is_suspicious && <span data-testid={`suspicious-${log.id}`}>⚠️</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="mobile-card-list" data-testid="audit-mobile-cards">
+                {logs.map(log => (
+                  <div key={log.id} className="mobile-card-item" data-testid={`log-card-${log.id}`} style={log.is_suspicious ? { background: 'var(--warning-light)' } : undefined}>
+                    <div className="mobile-card-row">
+                      <span className="mobile-card-label">Timestamp</span>
+                      <span className="mobile-card-value">{new Date(log.timestamp).toLocaleString()}</span>
+                    </div>
+                    <div className="mobile-card-row">
+                      <span className="mobile-card-label">User</span>
+                      <span className="mobile-card-value">{log.user_name}</span>
+                    </div>
+                    <div className="mobile-card-row">
+                      <span className="mobile-card-label">Action</span>
+                      <span className="mobile-card-value">{log.action}</span>
+                    </div>
+                    <div className="mobile-card-row">
+                      <span className="mobile-card-label">Resource</span>
+                      <span className="mobile-card-value">{log.resource_type}/{log.resource_id}</span>
+                    </div>
+                    <div className="mobile-card-row">
+                      <span className="mobile-card-label">Details</span>
+                      <span className="mobile-card-value">{log.details}</span>
+                    </div>
+                    <div className="mobile-card-row">
+                      <span className="mobile-card-label">Flags</span>
+                      <span className="mobile-card-value">
+                        {log.is_sensitive && <span style={{ marginRight: 4 }}>🔒</span>}
+                        {log.is_suspicious && <span>⚠️</span>}
+                        {!log.is_sensitive && !log.is_suspicious && '—'}
+                      </span>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            </div>
           </div>
         )}
       </div>

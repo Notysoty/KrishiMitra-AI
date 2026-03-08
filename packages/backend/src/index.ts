@@ -15,6 +15,7 @@
  * Requirements: 5.7, 31.6
  */
 
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -49,6 +50,7 @@ import { CircuitState } from './types/resilience';
 // ── DB pool init ──────────────────────────────────────────────
 import { initPool } from './db/pool';
 import { initRedisClient } from './middleware/cache';
+import { loadSecrets } from './config/secrets';
 
 // ── App setup ─────────────────────────────────────────────────
 
@@ -133,6 +135,10 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 
 async function startServer(): Promise<void> {
   try {
+    // 0. Load secrets from AWS Secrets Manager (no-op if AUTH_SECRET_NAME not set)
+    await loadSecrets();
+    appLogger.info('Secrets loaded');
+
     // 1. Initialize database pool
     await initPool();
     appLogger.info('Database pool initialized');
@@ -185,6 +191,9 @@ async function startServer(): Promise<void> {
         : { status: 'healthy' as const, service: 'ai-circuit-breaker', checkedAt: new Date().toISOString() };
     });
 
+    // 5. Start background jobs
+    startBackgroundJobs();
+
     const PORT = process.env.PORT || 3000;
     app.listen(PORT, () => {
       appLogger.info(`KrishiMitra-AI backend running on port ${PORT}`);
@@ -193,6 +202,74 @@ async function startServer(): Promise<void> {
     appLogger.error('Failed to start server', err as Error);
     process.exit(1);
   }
+}
+
+// ── Background Jobs ───────────────────────────────────────────
+
+function startBackgroundJobs(): void {
+  const PRICE_ALERT_INTERVAL_MS = 60 * 60 * 1000; // every hour
+
+  async function runPriceAlerts() {
+    try {
+      const alerts = await registry.alertGenerator.checkPriceAlerts();
+      if (alerts.length > 0) {
+        appLogger.info(`Price alert cron: ${alerts.length} alert(s) triggered`);
+      }
+    } catch (err) {
+      appLogger.warn('Price alert cron error', { error: (err as Error).message });
+    }
+  }
+
+  // Run once at startup (after a short delay to let DB settle), then hourly
+  setTimeout(runPriceAlerts, 10_000);
+  setInterval(runPriceAlerts, PRICE_ALERT_INTERVAL_MS);
+
+  // Pest alerts — run once daily
+  const PEST_ALERT_INTERVAL_MS = 24 * 60 * 60 * 1000;
+
+  async function runPestAlerts() {
+    try {
+      const alerts = await registry.pestAlertService.checkPestAlerts();
+      if (alerts.length > 0) {
+        appLogger.info(`Pest alert cron: ${alerts.length} alert(s) triggered`);
+      }
+    } catch (err) {
+      appLogger.warn('Pest alert cron error', { error: (err as Error).message });
+    }
+  }
+
+  setTimeout(runPestAlerts, 30_000); // 30s after startup
+  setInterval(runPestAlerts, PEST_ALERT_INTERVAL_MS);
+
+  // Index any knowledge_articles that don't have embeddings yet (runs once at startup)
+  setTimeout(async () => {
+    try {
+      const { getPool } = await import('./db/pool');
+      const pool = getPool();
+      const result = await pool.query(
+        `SELECT id, tenant_id FROM knowledge_articles WHERE embedding IS NULL AND status = 'approved' LIMIT 50`,
+      );
+      if (result.rows.length === 0) {
+        appLogger.info('Knowledge base: all articles already indexed');
+        return;
+      }
+      appLogger.info(`Knowledge base: indexing ${result.rows.length} unembedded article(s)...`);
+      let indexed = 0;
+      for (const row of result.rows) {
+        try {
+          await registry.ragSystem.index(row.id as string, row.tenant_id as string);
+          indexed++;
+        } catch (err) {
+          appLogger.warn(`Knowledge base: failed to index article ${row.id as string}`, { error: (err as Error).message });
+        }
+      }
+      appLogger.info(`Knowledge base: indexed ${indexed}/${result.rows.length} article(s)`);
+    } catch (err) {
+      appLogger.warn('Knowledge base indexer error', { error: (err as Error).message });
+    }
+  }, 15_000);
+
+  appLogger.info('Background jobs started (price alerts: hourly, KB indexer: once)');
 }
 
 // ── Graceful shutdown ─────────────────────────────────────────

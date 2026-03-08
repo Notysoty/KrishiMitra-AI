@@ -1,0 +1,39 @@
+Pradhan Mantri Fasal Bima Yojana (PMFBY) - Crop Insurance Guide
+
+OVERVIEW
+PMFBY provides comprehensive risk coverage for all stages of crop cycle including pre-sowing to post-harvest losses due to non-preventable natural risks.
+
+PREMIUM RATES
+- Kharif crops: 2% of sum insured (maximum)
+- Rabi crops: 1.5% of sum insured (maximum)
+- Annual commercial and horticultural crops: 5% of sum insured (maximum)
+- Remaining premium paid by Central and State Governments equally
+
+COVERAGE
+Risks covered:
+- Natural fire, lightning, storm, hailstorm, cyclone, typhoon, flood, inundation, landslide
+- Drought, dry spells, pest/disease attack
+- Post-harvest losses for up to 14 days from harvest
+
+Risks NOT covered:
+- War and nuclear risks
+- Malicious damage, theft
+- Other preventable risks
+
+SUM INSURED
+- Based on Scale of Finance fixed by District Level Technical Committee (DLTC)
+- Covers actual cost of cultivation
+
+CLAIM PROCESS
+1. Crop loss must be more than 25% to trigger claim
+2. Report crop loss within 72 hours via crop insurance app or 14447 helpline
+3. Joint survey by insurance company, state government, bank
+4. Claim settlement within 2 months of harvest completion
+
+ENROLLMENT
+- Loanee farmers: Automatic enrollment through banks (can opt-out)
+- Non-loanee farmers: Enroll at nearest bank, insurance company branch, or online
+- Deadline: 1-2 weeks before sowing for Kharif; as notified for Rabi
+
+HELPLINE: 14447 (toll-free)
+PORTAL: pmfby.gov.in

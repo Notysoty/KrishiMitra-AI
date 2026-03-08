@@ -29,6 +29,7 @@ import { AlertGenerator } from './alert/AlertGenerator';
 import { AlertDeliveryService } from './alert/AlertDeliveryService';
 import { SustainabilityCalculator } from './sustainability/SustainabilityCalculator';
 import { AIAssistant, MockLLMClient, RateLimiter, InteractionLogger } from './ai/AIAssistant';
+import { BedrockLLMClient, isBedrockConfigured } from './ai/BedrockLLMClient';
 import { RAGSystem, MockEmbeddingService } from './ai/RAGSystem';
 import { SafetyGuardrail } from './ai/SafetyGuardrail';
 import { DiseaseClassifier } from './ai/DiseaseClassifier';
@@ -42,6 +43,7 @@ import { AuditService } from './admin/AuditService';
 import { GroupService } from './admin/GroupService';
 import { MLOpsService } from './mlops/MLOpsService';
 import { ETLService } from './etl/ETLService';
+import { PestAlertService } from './alert/PestAlertService';
 
 // ── Circuit breaker instances for external services ──────────────
 
@@ -136,6 +138,8 @@ class ServiceRegistry {
   readonly groupService = new GroupService();
 
   // ── ETL ───────────────────────────────────────────────────
+  readonly pestAlertService = new PestAlertService();
+
   readonly etlService = new ETLService({
     logger: appLogger,
     onAlert: (alert) => {
@@ -148,16 +152,42 @@ class ServiceRegistry {
   });
 
   constructor() {
-    // Wire AIAssistant with circuit-breaker-wrapped LLM client
-    const baseLLMClient = new MockLLMClient();
+    const usesBedrock = isBedrockConfigured();
+    const baseLLMClient = usesBedrock ? new BedrockLLMClient() : new MockLLMClient();
+    appLogger.info(`LLM client: ${usesBedrock ? 'AWS Bedrock' : 'Mock (set AWS_ACCESS_KEY_ID to enable Bedrock)'}`);
+
+    const modelName = usesBedrock
+      ? (process.env.BEDROCK_MODEL_ID ?? 'anthropic.claude-3-5-sonnet')
+      : 'mock';
+
     const wrappedLLMClient = {
-      generate: (params: Parameters<typeof baseLLMClient.generate>[0]) =>
-        circuitBreakers.aiProvider.execute(
-          () => baseLLMClient.generate(params),
-          async () => ({
-            text: 'AI service is temporarily unavailable. Please try again in a few minutes.',
-          }),
-        ),
+      generate: async (params: Parameters<typeof baseLLMClient.generate>[0]) => {
+        const start = Date.now();
+        try {
+          const result = await circuitBreakers.aiProvider.execute(
+            () => baseLLMClient.generate(params),
+            async () => ({
+              text: 'AI service is temporarily unavailable. Please try again in a few minutes.',
+            }),
+          );
+          this.mlOps.recordInference({
+            modelName,
+            modelVersion: '1',
+            latencyMs: Date.now() - start,
+            success: true,
+          });
+          return result;
+        } catch (err) {
+          this.mlOps.recordInference({
+            modelName,
+            modelVersion: '1',
+            latencyMs: Date.now() - start,
+            success: false,
+            error: err instanceof Error ? err.message : String(err),
+          });
+          throw err;
+        }
+      },
     };
 
     this.aiAssistant = new AIAssistant(

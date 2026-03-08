@@ -5,65 +5,51 @@ interface Props {
   notifications: AlertNotification[];
 }
 
-const priorityColors: Record<string, { bg: string; border: string; text: string }> = {
-  high: { bg: '#ffebee', border: '#ef9a9a', text: '#c62828' },
-  medium: { bg: '#fff3e0', border: '#ffb74d', text: '#e65100' },
-  low: { bg: '#e8f5e9', border: '#a5d6a7', text: '#2e7d32' },
+const priorityBadge: Record<string, string> = {
+  high: 'badge badge-red',
+  medium: 'badge badge-yellow',
+  low: 'badge badge-green',
 };
 
 export const AlertNotifications: React.FC<Props> = ({ notifications }) => {
   if (notifications.length === 0) {
-    return <div data-testid="no-notifications">No alert notifications.</div>;
+    return <div data-testid="no-notifications" className="empty-state"><span className="empty-icon">🔕</span><span className="empty-text">No alert notifications.</span></div>;
   }
 
   return (
-    <div data-testid="alert-notifications" style={{ padding: 16 }}>
-      <h3>Alert Notifications</h3>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+    <div data-testid="alert-notifications" className="card">
+      <div className="card-header">
+        <h3>📬 Alert Notifications</h3>
+      </div>
+      <div className="card-body">
         {notifications.map((notif) => {
-          const colors = priorityColors[notif.priority] || priorityColors.low;
+          const priorityClass = notif.priority === 'high' ? 'high' : notif.priority === 'medium' ? 'medium' : 'low';
           return (
             <div
               key={notif.id}
               data-testid={`notification-${notif.id}`}
               role="alert"
-              style={{
-                padding: '10px 14px',
-                border: `1px solid ${colors.border}`,
-                borderRadius: 8,
-                backgroundColor: colors.bg,
-                opacity: notif.read ? 0.7 : 1,
-              }}
+              className={`notif-card ${priorityClass}`}
+              style={{ opacity: notif.read ? 0.7 : 1 }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span data-testid={`notif-title-${notif.id}`} style={{ fontWeight: 600, fontSize: 14, color: colors.text }}>
+              <div className="notif-header">
+                <span data-testid={`notif-title-${notif.id}`} className="notif-title">
                   {notif.title}
                 </span>
-                <span
-                  data-testid={`notif-priority-${notif.id}`}
-                  style={{
-                    padding: '2px 8px',
-                    borderRadius: 8,
-                    fontSize: 11,
-                    fontWeight: 600,
-                    color: '#fff',
-                    backgroundColor: colors.text,
-                  }}
-                >
+                <span data-testid={`notif-priority-${notif.id}`} className={priorityBadge[notif.priority]}>
                   {notif.priority.charAt(0).toUpperCase() + notif.priority.slice(1)}
                 </span>
               </div>
 
-              <div data-testid={`notif-message-${notif.id}`} style={{ marginTop: 4, fontSize: 13 }}>
+              <div data-testid={`notif-message-${notif.id}`} className="notif-message">
                 {notif.message}
               </div>
 
-              <div data-testid={`notif-actionable-${notif.id}`} style={{ marginTop: 6, padding: '6px 10px', backgroundColor: 'rgba(255,255,255,0.7)', borderRadius: 4, fontSize: 12, color: '#333' }}>
+              <div data-testid={`notif-actionable-${notif.id}`} className="notif-action">
                 💡 {notif.actionable_info}
               </div>
 
-              <div style={{ marginTop: 4, fontSize: 11, color: '#888' }}>
+              <div className="notif-meta">
                 {new Date(notif.created_at).toLocaleString('en-IN')}
                 {notif.read && <span style={{ marginLeft: 8 }}>✓ Read</span>}
               </div>

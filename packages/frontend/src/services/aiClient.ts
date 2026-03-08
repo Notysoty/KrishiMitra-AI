@@ -53,7 +53,6 @@ async function aiFetch(path: string, options: RequestInit = {}): Promise<Respons
       headers['Authorization'] = `Bearer ${refreshed.token}`;
       return fetch(`${BASE_URL}${path}`, { ...options, headers });
     }
-    window.location.href = '/login';
     throw new Error('Unauthorized');
   }
 

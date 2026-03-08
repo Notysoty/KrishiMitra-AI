@@ -2,10 +2,11 @@ import { Router, Response } from 'express';
 import express from 'express';
 import { authenticate, AuthenticatedRequest } from '../middleware/authenticate';
 import { requirePermissions, Permission } from '../middleware/rbac';
-import { DiseaseClassifier } from '../services/ai/DiseaseClassifier';
+import { registry } from '../services/ServiceRegistry';
+import { getPool } from '../db/pool';
 
 const router = Router();
-const classifier = new DiseaseClassifier();
+const classifier = registry.diseaseClassifier;
 
 // All disease routes require authentication
 router.use(authenticate);
@@ -60,6 +61,7 @@ router.post(
         user.id,
         user.tenant_id,
         storeConsent,
+        contentType,
       );
 
       res.json(result);
@@ -90,6 +92,145 @@ router.get(
     } catch (err) {
       console.error('Disease history error:', err);
       res.status(500).json({ error: 'An error occurred while fetching classification history.' });
+    }
+  },
+);
+
+/**
+ * POST /api/v1/disease/detections
+ *
+ * Persist a disease detection result for the Crop Health Timeline.
+ * Body (JSON):
+ *   cropType       string   — e.g. "wheat"
+ *   diseaseName    string   — disease label from classifier
+ *   confidence     number   — 0–1
+ *   severity       string   — "healthy" | "mild" | "severe"
+ *   treatmentPlan  string   — free-text treatment summary
+ *   imageS3Key     string?  — optional S3 key when image was stored
+ */
+router.post(
+  '/detections',
+  requirePermissions(Permission.AI_CLASSIFY_DISEASE),
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const user = req.user!;
+      const { cropType, diseaseName, confidence, severity, treatmentPlan, imageS3Key } = req.body;
+
+      if (!cropType || typeof cropType !== 'string') {
+        res.status(400).json({ error: 'cropType is required.' });
+        return;
+      }
+
+      let pool: ReturnType<typeof getPool> | null = null;
+      try {
+        pool = getPool();
+      } catch {
+        // DB not available in dev — return 201 with a mock id
+        res.status(201).json({ id: `mock_${Date.now()}`, message: 'Detection recorded (mock).' });
+        return;
+      }
+
+      const result = await pool.query(
+        `INSERT INTO disease_detections
+           (tenant_id, user_id, crop_type, image_s3_key, disease_name, confidence, severity, treatment_plan)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         RETURNING id, detected_at`,
+        [
+          user.tenant_id,
+          user.id,
+          cropType,
+          imageS3Key ?? null,
+          diseaseName ?? null,
+          confidence != null ? Number(confidence) : null,
+          severity ?? null,
+          treatmentPlan ?? null,
+        ],
+      );
+
+      res.status(201).json({
+        id: result.rows[0].id,
+        detectedAt: result.rows[0].detected_at,
+        message: 'Detection recorded.',
+      });
+    } catch (err) {
+      console.error('Disease detections POST error:', err);
+      res.status(500).json({ error: 'Failed to save detection.' });
+    }
+  },
+);
+
+/**
+ * GET /api/v1/disease/detections
+ *
+ * Return the last 50 disease detections for the authenticated user.
+ * Query params:
+ *   cropType  string?  — filter by crop type (case-insensitive)
+ *   limit     number?  — max results (default 50, max 100)
+ */
+router.get(
+  '/detections',
+  requirePermissions(Permission.AI_CLASSIFY_DISEASE),
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const user = req.user!;
+      const limit = Math.min(Number(req.query.limit) || 50, 100);
+      const cropType = req.query.cropType as string | undefined;
+
+      let pool: ReturnType<typeof getPool> | null = null;
+      try {
+        pool = getPool();
+      } catch {
+        // DB not initialised — return mock history for dev
+        const mockHistory = [
+          {
+            id: 'mock-1',
+            crop_type: 'wheat',
+            disease_name: 'Leaf Blight',
+            confidence: 0.82,
+            severity: 'mild',
+            treatment_plan: 'Apply copper-based fungicide. Remove infected leaves.',
+            detected_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+          },
+          {
+            id: 'mock-2',
+            crop_type: 'rice',
+            disease_name: 'Healthy',
+            confidence: 0.95,
+            severity: 'healthy',
+            treatment_plan: null,
+            detected_at: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
+          },
+        ].filter((r) => !cropType || r.crop_type.toLowerCase() === cropType.toLowerCase());
+        res.json({ detections: mockHistory, count: mockHistory.length });
+        return;
+      }
+
+      let query: string;
+      let params: unknown[];
+
+      if (cropType) {
+        query = `
+          SELECT id, crop_type, image_s3_key, disease_name, confidence, severity, treatment_plan, detected_at
+          FROM disease_detections
+          WHERE user_id = $1 AND tenant_id = $2 AND LOWER(crop_type) = LOWER($3)
+          ORDER BY detected_at DESC
+          LIMIT $4`;
+        params = [user.id, user.tenant_id, cropType, limit];
+      } else {
+        query = `
+          SELECT id, crop_type, image_s3_key, disease_name, confidence, severity, treatment_plan, detected_at
+          FROM disease_detections
+          WHERE user_id = $1 AND tenant_id = $2
+          ORDER BY detected_at DESC
+          LIMIT $3`;
+        params = [user.id, user.tenant_id, limit];
+      }
+
+      const result = await pool.query(query, params);
+      res.json({ detections: result.rows, count: result.rows.length });
+    } catch (err) {
+      console.error('Disease detections GET error:', err);
+      res.status(500).json({ error: 'Failed to fetch detections.' });
     }
   },
 );

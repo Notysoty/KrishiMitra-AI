@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { getAnalyticsReport, exportReport, AnalyticsReport } from '../services/adminClient';
 
 export const AnalyticsPage: React.FC = () => {
@@ -30,94 +31,122 @@ export const AnalyticsPage: React.FC = () => {
     } catch { setError(`Failed to export ${format.toUpperCase()}.`); }
   };
 
-  const containerStyle: React.CSSProperties = { maxWidth: 800, margin: '0 auto', fontFamily: 'sans-serif' };
-  const headerStyle: React.CSSProperties = { padding: '12px 16px', backgroundColor: '#0d47a1', color: '#fff', fontWeight: 600, fontSize: 18 };
-  const selectStyle: React.CSSProperties = { padding: '6px 10px', border: '1px solid #ccc', borderRadius: 4, fontSize: 14, marginRight: 8 };
-  const btnStyle: React.CSSProperties = { padding: '6px 16px', backgroundColor: '#0d47a1', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 13, marginRight: 8 };
-
   return (
-    <div style={containerStyle} data-testid="analytics-page">
-      <div style={headerStyle}>Analytics & Reporting</div>
+    <div className="page-container fade-in" data-testid="analytics-page">
+      <div className="section-header-light">📊 Analytics & Reporting</div>
 
-      <div style={{ padding: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16 }}>
-          <label style={{ marginRight: 8 }}>Period:</label>
-          <select style={selectStyle} value={period} onChange={e => setPeriod(e.target.value)} data-testid="period-select">
+      <div className="mt-4">
+        <div className="flex items-center gap-2 mb-4">
+          <label className="form-label" style={{ marginBottom: 0 }}>Period:</label>
+          <select className="form-select" value={period} onChange={e => setPeriod(e.target.value)} data-testid="period-select" style={{ width: 'auto' }}>
             <option value="7d">Last 7 Days</option>
             <option value="30d">Last 30 Days</option>
             <option value="90d">Last 90 Days</option>
           </select>
-          <button style={btnStyle} onClick={() => handleExport('pdf')} data-testid="export-pdf-btn">Export PDF</button>
-          <button style={btnStyle} onClick={() => handleExport('csv')} data-testid="export-csv-btn">Export CSV</button>
+          <button className="btn btn-primary btn-sm" onClick={() => handleExport('pdf')} data-testid="export-pdf-btn">Export PDF</button>
+          <button className="btn btn-accent btn-sm" onClick={() => handleExport('csv')} data-testid="export-csv-btn">Export CSV</button>
         </div>
 
-        {loading && <div data-testid="loading-indicator" style={{ padding: 24, textAlign: 'center', color: '#666' }}>Loading...</div>}
-        {error && <div data-testid="error-message" role="alert" style={{ padding: '8px 16px', backgroundColor: '#ffebee', color: '#c62828', fontSize: 13 }}>{error}</div>}
+        {loading && <div data-testid="loading-indicator" className="p-4"><div className="skeleton-heading mb-3" /><div className="skeleton-line" /><div className="skeleton-line medium" /><div className="skeleton-line short" /></div>}
+        {error && <div data-testid="error-message" role="alert" className="alert-box alert-error">{error}</div>}
 
         {!loading && !error && report && (
           <div data-testid="report-content">
-            <div data-testid="dau-section" style={{ marginBottom: 24 }}>
-              <h3>Daily Active Users</h3>
-              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 120 }}>
-                {report.daily_active_users.map((d, i) => {
-                  const maxCount = Math.max(...report.daily_active_users.map(x => x.count));
-                  const height = maxCount > 0 ? (d.count / maxCount) * 100 : 0;
-                  return (
-                    <div key={i} style={{ flex: 1, textAlign: 'center' }}>
-                      <div style={{ height: `${height}%`, backgroundColor: '#0d47a1', borderRadius: '4px 4px 0 0', minHeight: 4 }} />
-                      <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>{d.date.slice(5)}</div>
-                    </div>
-                  );
-                })}
+            <div data-testid="dau-section" className="card mb-4">
+              <div className="card-header">Daily Active Users</div>
+              <div className="card-body">
+                <div style={{ width: '100%', height: 220 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={report.daily_active_users} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis dataKey="date" tick={{ fontSize: 11 }} stroke="#9ca3af" tickFormatter={(v: string) => v.slice(5)} />
+                      <YAxis tick={{ fontSize: 11 }} stroke="#9ca3af" />
+                      <Tooltip labelStyle={{ fontWeight: 600 }} />
+                      <Bar dataKey="count" fill="#16a34a" radius={[4, 4, 0, 0]} name="Users" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
             </div>
 
-            <div data-testid="feature-adoption-section" style={{ marginBottom: 24 }}>
-              <h3>Feature Adoption</h3>
-              {report.feature_adoption.map(f => (
-                <div key={f.feature} style={{ marginBottom: 8 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-                    <span>{f.feature}</span><span>{f.rate}%</span>
-                  </div>
-                  <div style={{ height: 8, backgroundColor: '#e0e0e0', borderRadius: 4 }}>
-                    <div style={{ height: '100%', width: `${f.rate}%`, backgroundColor: '#0d47a1', borderRadius: 4 }} />
-                  </div>
+            <div data-testid="feature-adoption-section" className="card mb-4">
+              <div className="card-header">Feature Adoption</div>
+              <div className="card-body">
+                <div style={{ width: '100%', height: 260 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={report.feature_adoption} layout="vertical" margin={{ top: 5, right: 20, left: 80, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis type="number" tick={{ fontSize: 11 }} stroke="#9ca3af" domain={[0, 100]} tickFormatter={(v: number) => `${v}%`} />
+                      <YAxis type="category" dataKey="feature" tick={{ fontSize: 11 }} stroke="#9ca3af" width={75} />
+                      <Tooltip formatter={(value) => [`${value ?? 0}%`, 'Adoption']} />
+                      <Bar dataKey="rate" fill="#15803d" radius={[0, 4, 4, 0]} name="Adoption Rate" />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
-              ))}
+              </div>
             </div>
 
-            <div data-testid="ai-interactions-section" style={{ marginBottom: 24 }}>
-              <h3>AI Interactions</h3>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                <thead>
-                  <tr style={{ borderBottom: '2px solid #e0e0e0', textAlign: 'left' }}>
-                    <th style={{ padding: 8 }}>Date</th><th style={{ padding: 8 }}>Queries</th><th style={{ padding: 8 }}>Accuracy</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {report.ai_interactions.map(ai => (
-                    <tr key={ai.date} style={{ borderBottom: '1px solid #eee' }}>
-                      <td style={{ padding: 8 }}>{ai.date}</td>
-                      <td style={{ padding: 8 }}>{ai.queries}</td>
-                      <td style={{ padding: 8 }}>{ai.accuracy}%</td>
+            <div data-testid="ai-interactions-section" className="card mb-4">
+              <div className="card-header">AI Interactions</div>
+              <div className="card-body">
+                <div style={{ width: '100%', height: 220, marginBottom: 16 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={report.ai_interactions} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis dataKey="date" tick={{ fontSize: 11 }} stroke="#9ca3af" tickFormatter={(v: string) => v.slice(5)} />
+                      <YAxis tick={{ fontSize: 11 }} stroke="#9ca3af" />
+                      <Tooltip labelStyle={{ fontWeight: 600 }} />
+                      <Bar dataKey="queries" fill="#16a34a" radius={[4, 4, 0, 0]} name="Queries" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th><th>Queries</th><th>Accuracy</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {report.ai_interactions.map(ai => (
+                      <tr key={ai.date}>
+                        <td>{ai.date}</td>
+                        <td>{ai.queries}</td>
+                        <td>{ai.accuracy}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             <div data-testid="farmer-outcomes-section">
-              <h3>Farmer Outcomes</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
-                {report.farmer_outcomes.map(o => (
-                  <div key={o.metric} style={{ padding: 12, backgroundColor: '#e3f2fd', borderRadius: 8, textAlign: 'center' }}>
-                    <div style={{ fontSize: 20, fontWeight: 700 }}>{o.value.toLocaleString('en-IN')}</div>
-                    <div style={{ fontSize: 12, color: '#666' }}>{o.metric}</div>
-                    <div style={{ fontSize: 12, color: o.change_pct >= 0 ? '#2e7d32' : '#c62828', fontWeight: 600 }}>
-                      {o.change_pct >= 0 ? '↑' : '↓'} {Math.abs(o.change_pct)}%
-                    </div>
+              <h3 className="mb-3">Farmer Outcomes</h3>
+              <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', marginBottom: 16 }}>
+                <div style={{ flex: 1, minWidth: 200 }}>
+                  <div className="stat-grid">
+                    {report.farmer_outcomes.map(o => (
+                      <div key={o.metric} className="stat-card" style={{ background: 'var(--accent-light)' }}>
+                        <div className="stat-value">{o.value.toLocaleString('en-IN')}</div>
+                        <div className="stat-label">{o.metric}</div>
+                        <div className={`stat-change ${o.change_pct >= 0 ? 'positive' : 'negative'}`}>
+                          {o.change_pct >= 0 ? '↑' : '↓'} {Math.abs(o.change_pct)}%
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                </div>
+                <div style={{ width: 220, height: 220 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={report.farmer_outcomes} dataKey="value" nameKey="metric" cx="50%" cy="50%" outerRadius={80} label={({ name }: { name?: string }) => name || ''}>
+                        {report.farmer_outcomes.map((_, i) => (
+                          <Cell key={i} fill={['#16a34a', '#15803d', '#166534', '#22c55e'][i % 4]} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value) => [Number(value ?? 0).toLocaleString('en-IN'), '']} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
             </div>
           </div>

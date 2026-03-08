@@ -1,0 +1,74 @@
+Tomato Cultivation Guide - Rabi Season (India)
+
+VARIETIES
+Plains: Pusa Ruby, Pusa-120, HS-101, Punjab Chuhara
+Hills: Hisar Arun, Solan Gola
+Hybrid: Rashmi, Avinash-2, Naveen
+
+CLIMATE REQUIREMENTS
+- Temperature: 21-24 degrees C (day), 10-20 degrees C (night)
+- Frost susceptible; avoid waterlogging
+- Relative humidity: 45-65%
+
+SOIL REQUIREMENTS
+- Well-drained loamy or sandy loam soil
+- pH: 6.0-7.0
+- Rich in organic matter
+
+NURSERY PREPARATION
+- 400-500g seed per hectare
+- Treat seeds with Thiram 2g/kg
+- Sow seeds 1-2cm deep; cover lightly
+- Transplant when 25-30 days old (5-6 leaf stage)
+
+TRANSPLANTING
+- Spacing: 60cm x 45cm (open field)
+- Drip system: 75cm x 45cm
+
+IRRIGATION
+- Drip irrigation preferred (saves 40% water)
+- Furrow irrigation: Every 5-7 days in summer, 10-12 days in winter
+- Critical stages: Flowering and fruit set
+- Avoid moisture stress at flowering; avoid waterlogging at any stage
+
+FERTILIZER APPLICATION
+- Basal dose: 120 kg N, 80 kg P, 60 kg K per hectare
+- Top dressing: 40 kg N at 30 days; 40 kg N at fruit set
+- Micronutrients: Boron 1g/liter at flowering, Calcium at fruit set
+
+COMMON DISEASES
+1. Early Blight (Alternaria solani)
+   - Brown spots with concentric rings on leaves
+   - Management: Mancozeb 75WP at 2g/liter, or Iprodione
+
+2. Late Blight (Phytophthora infestans)
+   - Water-soaked lesions, white mold on underside
+   - Management: Metalaxyl-M plus Mancozeb, Cymoxanil
+
+3. Bacterial Wilt (Ralstonia solanacearum)
+   - Sudden wilting, vascular browning
+   - Management: Soil drenching with Copper oxychloride; avoid waterlogging
+
+4. Tomato Yellow Leaf Curl Virus (TYLCV)
+   - Yellow curling leaves, stunted growth
+   - Transmitted by whitefly
+   - Management: Control whitefly with Imidacloprid; use resistant varieties
+
+COMMON PESTS
+1. Fruit Borer (Helicoverpa armigera)
+   - Most destructive pest; larvae bore into fruits
+   - Management: Pheromone traps (5/ha), Spinosad 45SC at 0.15ml/liter, NPV
+
+2. Whitefly (Bemisia tabaci)
+   - Spreads TYLCV virus
+   - Management: Imidacloprid 0.5ml/liter, yellow sticky traps
+
+3. Aphids
+   - Cluster on growing tips and leaves
+   - Management: Dimethoate 30EC at 2ml/liter, Neem oil
+
+HARVESTING
+- First harvest: 60-90 days after transplanting
+- Frequency: Every 3-4 days
+- Maturity: Light red color for local market, green-pink for distant markets
+- Average yield: 25-35 tonnes per hectare

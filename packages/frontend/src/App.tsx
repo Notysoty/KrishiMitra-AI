@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   BrowserRouter,
   Routes,
   Route,
   Navigate,
   useLocation,
+  useNavigate,
   Outlet,
 } from 'react-router-dom';
 
@@ -21,18 +22,24 @@ import { AuditLogPage } from './pages/AuditLogPage';
 import { ContentModerationPage } from './pages/ContentModerationPage';
 import { GroupManagementPage } from './pages/GroupManagementPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
+import { ProfilePage } from './pages/ProfilePage';
+import { DashboardPage } from './pages/DashboardPage';
 
 import { ConnectionStatusIndicator } from './components/ConnectionStatus';
 import { AlertNotifications } from './components/AlertNotifications';
+import { LanguageSelector } from './components/LanguageSelector';
+import { ThemeToggle } from './components/ThemeToggle';
+import { CommandPalette } from './components/CommandPalette';
 
-import { I18nProvider } from './i18n';
-import { isAuthenticated } from './services/authClient';
-import { startBackgroundSync } from './services/backgroundSync';
+import { ThemeProvider } from './contexts/ThemeContext';
+import { ToastProvider } from './contexts/ToastContext';
+import { I18nProvider, useTranslation } from './i18n';
+import { isAuthenticated, logout, isAdmin } from './services/authClient';
+import { startBackgroundSync, setupPushNotifications } from './services/backgroundSync';
 import { getAlerts } from './services/alertClient';
 import type { Alert } from './services/alertClient';
 import type { AlertNotification } from './services/marketClient';
 
-// Adapt Alert → AlertNotification shape for the existing component
 function toNotification(a: Alert): AlertNotification {
   return {
     id: a.id,
@@ -48,7 +55,6 @@ function toNotification(a: Alert): AlertNotification {
   };
 }
 
-/** Redirect to /login when not authenticated */
 function AuthGuard() {
   const location = useLocation();
   if (!isAuthenticated()) {
@@ -57,12 +63,34 @@ function AuthGuard() {
   return <Outlet />;
 }
 
-/** App shell with persistent header */
 function AppShell() {
+  const { t } = useTranslation();
+
+  const MAIN_NAV = [
+    { path: '/dashboard', label: 'Dashboard', icon: '🏠' },
+    { path: '/chat', label: t('navChat'), icon: '💬' },
+    { path: '/farm-profile', label: t('navFarm'), icon: '🏡' },
+    { path: '/market', label: t('market'), icon: '📊' },
+    { path: '/sustainability', label: t('navSustainability'), icon: '🌱' },
+    { path: '/groups', label: t('navGroups'), icon: '👥' },
+  ];
+
+  const ADMIN_NAV = [
+    { path: '/admin', label: t('navAdmin'), icon: '⚙️' },
+    { path: '/analytics', label: t('navAnalytics'), icon: '📈' },
+    { path: '/audit-log', label: t('navAudit'), icon: '📋' },
+    { path: '/moderation', label: t('navModeration'), icon: '🛡️' },
+    { path: '/platform-admin', label: t('navPlatform'), icon: '🔧' },
+  ];
   const [alerts, setAlerts] = useState<AlertNotification[]>([]);
   const [showAlerts, setShowAlerts] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [adminOpen, setAdminOpen] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [cmdPaletteOpen, setCmdPaletteOpen] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  // Poll for alerts every 60 seconds
   useEffect(() => {
     let cancelled = false;
 
@@ -72,9 +100,7 @@ function AppShell() {
         if (!cancelled) {
           setAlerts(raw.filter((a) => !a.read).map(toNotification));
         }
-      } catch {
-        // Degrade gracefully — no alerts shown when offline/error
-      }
+      } catch { /* graceful degradation */ }
     }
 
     fetchAlerts();
@@ -85,104 +111,184 @@ function AppShell() {
     };
   }, []);
 
+  useEffect(() => {
+    setMobileSidebarOpen(false);
+  }, [location.pathname]);
+
+  const handleGlobalKeyDown = useCallback((e: KeyboardEvent) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      e.preventDefault();
+      setCmdPaletteOpen((v) => !v);
+    }
+  }, []);
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleGlobalKeyDown);
+    return () => document.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [handleGlobalKeyDown]);
+
   const unreadCount = alerts.filter((a) => !a.read).length;
 
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
+  const handleNav = (path: string) => {
+    navigate(path);
+  };
+
+  const isActive = (path: string) => location.pathname === path;
+
+  const isAdminActive = ADMIN_NAV.some((item) => location.pathname === item.path);
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <header
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '8px 16px',
-          backgroundColor: '#1976d2',
-          color: '#fff',
-        }}
+    <div className="app-layout">
+      <aside
+        className={`sidebar ${sidebarCollapsed ? 'collapsed' : ''} ${mobileSidebarOpen ? 'mobile-open' : ''}`}
       >
-        <span style={{ fontWeight: 700, fontSize: 18 }}>🌾 KrishiMitra</span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <ConnectionStatusIndicator />
+        <div className="sidebar-logo">
+          <img src="/logo.svg" alt="" className="logo-icon" width={28} height={28} style={{ borderRadius: '6px' }} />
+          <span className="logo-text">KrishiMitra</span>
+        </div>
+
+        <nav className="sidebar-nav">
+          {MAIN_NAV.map((item) => (
+            <button
+              key={item.path}
+              className={`sidebar-nav-item ${isActive(item.path) ? 'active' : ''}`}
+              onClick={() => handleNav(item.path)}
+              title={sidebarCollapsed ? item.label : undefined}
+            >
+              <span className="nav-icon">{item.icon}</span>
+              <span className="nav-label">{item.label}</span>
+            </button>
+          ))}
+
+          {isAdmin() && (
+          <div className="sidebar-section">
+            <button
+              className="sidebar-section-title"
+              onClick={() => setAdminOpen((v) => !v)}
+            >
+              <span>{t('navAdmin')}</span>
+              <span className={`chevron ${adminOpen ? 'open' : ''}`}>▾</span>
+            </button>
+
+            {(adminOpen || isAdminActive) &&
+              ADMIN_NAV.map((item) => (
+                <button
+                  key={item.path}
+                  className={`sidebar-nav-item ${isActive(item.path) ? 'active' : ''}`}
+                  onClick={() => handleNav(item.path)}
+                  title={sidebarCollapsed ? item.label : undefined}
+                >
+                  <span className="nav-icon">{item.icon}</span>
+                  <span className="nav-label">{item.label}</span>
+                </button>
+              ))}
+          </div>
+          )}
+        </nav>
+
+        <div className="sidebar-bottom">
           <button
-            onClick={() => setShowAlerts((v) => !v)}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#fff',
-              cursor: 'pointer',
-              fontSize: 20,
-              position: 'relative',
-            }}
-            aria-label={`Alerts${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
+            className={`sidebar-nav-item ${isActive('/profile') ? 'active' : ''}`}
+            onClick={() => handleNav('/profile')}
+            title={sidebarCollapsed ? t('profile') : undefined}
           >
-            🔔
-            {unreadCount > 0 && (
-              <span
-                style={{
-                  position: 'absolute',
-                  top: -4,
-                  right: -4,
-                  background: '#f44336',
-                  color: '#fff',
-                  borderRadius: '50%',
-                  fontSize: 10,
-                  width: 16,
-                  height: 16,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                {unreadCount}
-              </span>
-            )}
+            <span className="nav-icon">👤</span>
+            <span className="nav-label">{t('profile')}</span>
+          </button>
+          <button
+            className="sidebar-nav-item"
+            onClick={handleLogout}
+            title={sidebarCollapsed ? t('logout') : undefined}
+          >
+            <span className="nav-icon">🚪</span>
+            <span className="nav-label">{t('logout')}</span>
+          </button>
+          <button
+            className="sidebar-toggle"
+            onClick={() => setSidebarCollapsed((v) => !v)}
+            title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {sidebarCollapsed ? '→' : '←'}
           </button>
         </div>
-      </header>
+      </aside>
 
-      {showAlerts && (
+      {mobileSidebarOpen && (
         <div
-          style={{
-            position: 'fixed',
-            top: 48,
-            right: 16,
-            zIndex: 1000,
-            background: '#fff',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-            borderRadius: 8,
-            maxWidth: 360,
-            maxHeight: '60vh',
-            overflowY: 'auto',
-          }}
-        >
-          <AlertNotifications notifications={alerts} />
-        </div>
+          className="sidebar-overlay visible"
+          onClick={() => setMobileSidebarOpen(false)}
+        />
       )}
 
-      <main style={{ flex: 1 }}>
-        <Outlet />
-      </main>
+      <div className={`app-content ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+        <div className="app-topbar">
+          <button
+            className="sidebar-toggle-mobile"
+            onClick={() => setMobileSidebarOpen((v) => !v)}
+          >
+            ☰
+          </button>
+          <button className="kbd-hint" onClick={() => setCmdPaletteOpen(true)}>
+            ⌘K
+          </button>
+          <div className="topbar-spacer" />
+          <div className="topbar-actions">
+            <ConnectionStatusIndicator />
+            <LanguageSelector />
+            <ThemeToggle />
+            <button
+              className="alert-btn"
+              onClick={() => setShowAlerts((v) => !v)}
+              aria-label={`Alerts${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
+            >
+              🔔
+              {unreadCount > 0 && (
+                <span className="alert-badge">{unreadCount}</span>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {showAlerts && (
+          <div className="alert-dropdown">
+            <AlertNotifications notifications={alerts} />
+          </div>
+        )}
+
+        <main className="app-main">
+          <Outlet />
+        </main>
+      </div>
+
+      <CommandPalette isOpen={cmdPaletteOpen} onClose={() => setCmdPaletteOpen(false)} />
     </div>
   );
 }
 
 function App() {
-  // Initialize background sync once on mount
   useEffect(() => {
     const stop = startBackgroundSync();
+    setupPushNotifications();
     return stop;
   }, []);
 
   return (
+    <ThemeProvider>
+    <ToastProvider>
     <I18nProvider>
     <BrowserRouter>
       <Routes>
-        {/* Public routes */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
 
-        {/* Protected routes */}
         <Route element={<AuthGuard />}>
           <Route element={<AppShell />}>
+            <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/onboarding" element={<OnboardingPage />} />
             <Route path="/farm-profile" element={<FarmProfilePage />} />
             <Route path="/chat" element={<ChatPage />} />
@@ -194,16 +300,17 @@ function App() {
             <Route path="/moderation" element={<ContentModerationPage />} />
             <Route path="/groups" element={<GroupManagementPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
-            {/* Default redirect */}
-            <Route path="/" element={<Navigate to="/chat" replace />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
           </Route>
         </Route>
 
-        {/* Catch-all */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
     </I18nProvider>
+    </ToastProvider>
+    </ThemeProvider>
   );
 }
 

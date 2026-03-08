@@ -1,8 +1,11 @@
 import { Router, Response } from 'express';
 import { AlertDeliveryService } from '../services/alert/AlertDeliveryService';
+import { PestAlertService } from '../services/alert/PestAlertService';
 import { authenticate, AuthenticatedRequest } from '../middleware/authenticate';
 import { requirePermissions, Permission } from '../middleware/rbac';
 import { AlertStatus, AlertType } from '../types/enums';
+
+const pestAlertService = new PestAlertService();
 
 const router = Router();
 const deliveryService = new AlertDeliveryService();
@@ -120,6 +123,61 @@ router.get(
     }
   },
 );
+
+/**
+ * GET /api/v1/alerts/pest-advisories?crop=tomato&state=Maharashtra
+ * Returns seasonal pest advisories for a crop (no auth required for quick lookup).
+ */
+router.get('/pest-advisories', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const crop = (req.query.crop as string) ?? '';
+    const state = (req.query.state as string) ?? '';
+    if (!crop) {
+      res.status(400).json({ error: 'crop query param is required' });
+      return;
+    }
+    const advisories = pestAlertService.getAdvisoriesForCrop(crop, state);
+    res.json({ advisories });
+  } catch (err) {
+    handleError(res, err);
+  }
+});
+
+/**
+ * POST /api/v1/alerts/push-subscribe
+ * Body: { endpoint, keys: { p256dh, auth } }
+ * Saves a Web Push subscription for the authenticated user.
+ */
+router.post(
+  '/push-subscribe',
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const user = req.user!;
+      const { endpoint, keys } = req.body;
+      if (!endpoint || !keys?.p256dh || !keys?.auth) {
+        res.status(400).json({ error: 'endpoint, keys.p256dh, and keys.auth are required.' });
+        return;
+      }
+      await deliveryService.saveWebPushSubscription(user.id, { endpoint, keys });
+      res.json({ success: true });
+    } catch (err) {
+      handleError(res, err);
+    }
+  },
+);
+
+/**
+ * GET /api/v1/alerts/vapid-public-key
+ * Returns the VAPID public key so the frontend can subscribe to push.
+ */
+router.get('/vapid-public-key', (_req, res: Response) => {
+  const key = process.env.VAPID_PUBLIC_KEY;
+  if (!key) {
+    res.status(503).json({ error: 'Push notifications not configured on this server.' });
+    return;
+  }
+  res.json({ publicKey: key });
+});
 
 function handleError(res: Response, err: unknown) {
   console.error('Alert route error:', err);

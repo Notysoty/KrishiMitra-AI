@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" fill="none">
+  <!-- Background circle -->
+  <circle cx="20" cy="20" r="20" fill="#16a34a"/>
+  <!-- Stem -->
+  <path d="M20 32 L20 18" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/>
+  <!-- Left leaf -->
+  <path d="M20 22 C20 22 12 20 11 13 C11 13 18 12 20 20" fill="rgba(255,255,255,0.85)"/>
+  <!-- Right leaf -->
+  <path d="M20 18 C20 18 28 16 29 9 C29 9 22 8 20 16" fill="#fff"/>
+  <!-- Ground arc -->
+  <path d="M14 32 Q20 29 26 32" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+</svg>

@@ -5,9 +5,11 @@ import { AIAssistant, UserContext } from '../services/ai/AIAssistant';
 import { WorkflowService, WorkflowError } from '../services/ai/WorkflowService';
 import { WorkflowType } from '../types/workflow';
 
+import { registry } from '../services/ServiceRegistry';
+
 const router = Router();
-const aiAssistant = new AIAssistant();
-const workflowService = new WorkflowService();
+const aiAssistant = registry.aiAssistant;
+const workflowService = registry.workflowService;
 
 // All AI routes require authentication
 router.use(authenticate);
@@ -26,7 +28,7 @@ router.post(
   async (req: AuthenticatedRequest, res: Response) => {
     try {
       const user = req.user!;
-      const { query, language, farm } = req.body;
+      const { query, language, farm, history, userName } = req.body;
 
       if (!query || typeof query !== 'string' || query.trim().length === 0) {
         res.status(400).json({ error: 'query is required and must be a non-empty string.' });
@@ -37,7 +39,9 @@ router.post(
         userId: user.id,
         tenantId: user.tenant_id,
         language: language ?? 'en',
+        userName: userName,
         farm,
+        history: Array.isArray(history) ? history.slice(-20) : [],
       };
 
       const response = await aiAssistant.processQuery(query.trim(), context);

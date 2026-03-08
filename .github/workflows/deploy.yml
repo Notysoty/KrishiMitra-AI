@@ -1,0 +1,337 @@
+name: Deploy to AWS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'production'
+        type: choice
+        options: [production]
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '20'
+  AWS_REGION: us-east-1
+  ECR_BACKEND_REPO: krishimitra-backend
+  ECR_FRONTEND_REPO: krishimitra-frontend
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # 1. Run tests first — gate the deploy
+  # ─────────────────────────────────────────────────────────────────────────────
+  test:
+    name: Tests (gate)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - run: npm ci
+      - run: npm ci
+        working-directory: packages/backend
+      - run: npm ci
+        working-directory: packages/frontend
+
+      - name: Backend tests
+        run: npm test -- --passWithNoTests
+        working-directory: packages/backend
+        env:
+          CI: true
+          NODE_ENV: test
+
+      - name: Frontend tests
+        run: npm test -- --watchAll=false --passWithNoTests
+        working-directory: packages/frontend
+        env:
+          CI: true
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # 2. Build & push Docker image to ECR
+  # ─────────────────────────────────────────────────────────────────────────────
+  build-push-backend:
+    name: Build & Push Backend Image
+    runs-on: ubuntu-latest
+    needs: test
+    timeout-minutes: 20
+    outputs:
+      image-uri: ${{ steps.ecr-push.outputs.image }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push image
+        id: ecr-push
+        env:
+          REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          # Create ECR repo if it doesn't exist
+          aws ecr describe-repositories --repository-names $ECR_BACKEND_REPO 2>/dev/null || \
+            aws ecr create-repository --repository-name $ECR_BACKEND_REPO \
+              --image-scanning-configuration scanOnPush=true \
+              --encryption-configuration encryptionType=AES256
+
+          IMAGE_URI="$REGISTRY/$ECR_BACKEND_REPO:$IMAGE_TAG"
+          docker build -t "$IMAGE_URI" -f packages/backend/Dockerfile packages/backend/ || \
+            docker build -t "$IMAGE_URI" packages/backend/
+          docker push "$IMAGE_URI"
+
+          # Also tag as latest
+          docker tag "$IMAGE_URI" "$REGISTRY/$ECR_BACKEND_REPO:latest"
+          docker push "$REGISTRY/$ECR_BACKEND_REPO:latest"
+
+          echo "image=$IMAGE_URI" >> $GITHUB_OUTPUT
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # 3. Build frontend and upload to S3
+  # ─────────────────────────────────────────────────────────────────────────────
+  deploy-frontend:
+    name: Build & Deploy Frontend to S3/CloudFront
+    runs-on: ubuntu-latest
+    needs: test
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install and build frontend
+        run: |
+          npm ci
+          npm ci
+        working-directory: packages/frontend
+
+      - name: Build production frontend
+        run: npm run build
+        working-directory: packages/frontend
+        env:
+          CI: false
+          REACT_APP_API_URL: ${{ secrets.REACT_APP_API_URL }}
+          REACT_APP_OPENWEATHER_API_KEY: ${{ secrets.REACT_APP_OPENWEATHER_API_KEY }}
+          REACT_APP_DATA_GOV_API_KEY: ${{ secrets.REACT_APP_DATA_GOV_API_KEY }}
+
+      - name: Sync to S3 (if bucket exists)
+        run: |
+          BUCKET="${{ secrets.FRONTEND_S3_BUCKET }}"
+          if [ -n "$BUCKET" ]; then
+            aws s3 sync packages/frontend/build/ "s3://$BUCKET" \
+              --delete \
+              --cache-control "max-age=31536000,immutable" \
+              --exclude "index.html" \
+              --exclude "service-worker.js" \
+              --exclude "manifest.json"
+
+            # No-cache for HTML and SW (always fresh)
+            aws s3 cp packages/frontend/build/index.html "s3://$BUCKET/index.html" \
+              --cache-control "no-cache,no-store,must-revalidate"
+            aws s3 cp packages/frontend/build/service-worker.js "s3://$BUCKET/service-worker.js" \
+              --cache-control "no-cache,no-store,must-revalidate" 2>/dev/null || true
+
+            echo "Frontend deployed to s3://$BUCKET"
+
+            # Invalidate CloudFront if distribution ID is set
+            DIST_ID="${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}"
+            if [ -n "$DIST_ID" ]; then
+              aws cloudfront create-invalidation \
+                --distribution-id "$DIST_ID" \
+                --paths "/*"
+              echo "CloudFront invalidation triggered"
+            fi
+          else
+            echo "FRONTEND_S3_BUCKET secret not set — skipping S3 deploy"
+          fi
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # 4. CDK diff + deploy infrastructure
+  # ─────────────────────────────────────────────────────────────────────────────
+  deploy-infra:
+    name: CDK Deploy Infrastructure
+    runs-on: ubuntu-latest
+    needs: test
+    timeout-minutes: 60
+    if: ${{ secrets.AWS_ACCESS_KEY_ID != '' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install infra dependencies
+        run: npm ci
+        working-directory: packages/infra
+
+      - name: CDK bootstrap (idempotent)
+        run: npx cdk bootstrap "aws://${{ secrets.AWS_ACCOUNT_ID }}/${{ env.AWS_REGION }}" --require-approval never
+        working-directory: packages/infra
+        continue-on-error: true
+
+      - name: CDK synth (validate)
+        run: npx cdk synth
+        working-directory: packages/infra
+
+      - name: CDK diff
+        run: npx cdk diff 2>&1 || true
+        working-directory: packages/infra
+
+      - name: CDK deploy
+        run: npx cdk deploy --require-approval never --outputs-file cdk-outputs.json
+        working-directory: packages/infra
+
+      - name: Upload CDK outputs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cdk-outputs
+          path: packages/infra/cdk-outputs.json
+          retention-days: 30
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # 5. Update ECS service with new image (after infra + image are ready)
+  # ─────────────────────────────────────────────────────────────────────────────
+  deploy-backend:
+    name: Deploy Backend to ECS
+    runs-on: ubuntu-latest
+    needs: [build-push-backend, deploy-infra]
+    timeout-minutes: 20
+    if: ${{ needs.build-push-backend.result == 'success' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Force ECS service update
+        run: |
+          # Find the ECS cluster and service
+          CLUSTER=$(aws ecs list-clusters --query 'clusterArns[?contains(@, `krishimitra`)]' --output text 2>/dev/null | head -1)
+          if [ -n "$CLUSTER" ]; then
+            SERVICE=$(aws ecs list-services --cluster "$CLUSTER" --query 'serviceArns[0]' --output text 2>/dev/null)
+            if [ -n "$SERVICE" ] && [ "$SERVICE" != "None" ]; then
+              aws ecs update-service \
+                --cluster "$CLUSTER" \
+                --service "$SERVICE" \
+                --force-new-deployment \
+                --no-cli-pager
+              echo "ECS service update triggered: $SERVICE"
+            else
+              echo "No ECS service found in cluster $CLUSTER"
+            fi
+          else
+            echo "No KrishiMitra ECS cluster found — skipping ECS deploy"
+          fi
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # 6. Run DB migrations on deploy
+  # ─────────────────────────────────────────────────────────────────────────────
+  run-migrations:
+    name: Run DB Migrations
+    runs-on: ubuntu-latest
+    needs: deploy-infra
+    timeout-minutes: 10
+    if: ${{ needs.deploy-infra.result == 'success' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install backend dependencies
+        run: npm ci
+        working-directory: packages/backend
+
+      - name: Run migrations
+        run: npm run migrate
+        working-directory: packages/backend
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NODE_ENV: production
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # 7. Smoke test after full deploy
+  # ─────────────────────────────────────────────────────────────────────────────
+  smoke-test:
+    name: Smoke Test
+    runs-on: ubuntu-latest
+    needs: [deploy-backend, run-migrations]
+    timeout-minutes: 5
+    if: always()
+
+    steps:
+      - name: Health check
+        run: |
+          API_URL="${{ secrets.REACT_APP_API_URL }}"
+          if [ -n "$API_URL" ]; then
+            echo "Checking $API_URL/api/v1/health ..."
+            for i in 1 2 3 4 5; do
+              STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$API_URL/api/v1/health" 2>/dev/null || echo "000")
+              if [ "$STATUS" = "200" ]; then
+                echo "Health check passed (HTTP $STATUS)"
+                exit 0
+              fi
+              echo "Attempt $i: HTTP $STATUS — waiting 30s..."
+              sleep 30
+            done
+            echo "Health check failed after 5 attempts"
+            exit 1
+          else
+            echo "REACT_APP_API_URL not set — skipping smoke test"
+          fi

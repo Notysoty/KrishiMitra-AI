@@ -3,9 +3,10 @@ import crypto from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import { getPool } from '../../db/pool';
 import { Role } from '../../types/enums';
+import { getJwtSecret } from '../../config/secrets';
+import { OtpSender, createOtpSender } from './OtpSender';
 
 // ── Configuration ──────────────────────────────────────────────
-const JWT_SECRET = process.env.JWT_SECRET || 'krishimitra-dev-secret';
 const JWT_EXPIRY = '24h';
 const OTP_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
 const MAX_FAILED_ATTEMPTS = 5;
@@ -69,15 +70,20 @@ function hashToken(token: string): string {
 function signToken(payload: TokenPayload, expiresIn: string = JWT_EXPIRY): string {
   // Cast payload to plain object for jwt.sign compatibility
   const data = { ...payload };
-  return jwt.sign(data, JWT_SECRET, { expiresIn: expiresIn as unknown as number });
+  return jwt.sign(data, getJwtSecret(), { expiresIn: expiresIn as unknown as number });
 }
 
 export function verifyToken(token: string): TokenPayload {
-  return jwt.verify(token, JWT_SECRET) as TokenPayload;
+  return jwt.verify(token, getJwtSecret()) as TokenPayload;
 }
 
 // ── AuthService ────────────────────────────────────────────────
 export class AuthService {
+  private otpSender: OtpSender;
+
+  constructor(otpSender?: OtpSender) {
+    this.otpSender = otpSender ?? createOtpSender();
+  }
 
   /**
    * Register a new user within a tenant.
@@ -157,7 +163,7 @@ export class AuthService {
     const user = result.rows[0];
     const otp = generateOtp();
 
-    // Store OTP (mock provider — in production this would send SMS)
+    // Store OTP entry before sending so the entry exists on verify
     otpStore.set(lockoutKey, {
       otp,
       expiresAt: Date.now() + OTP_EXPIRY_MS,
@@ -165,8 +171,15 @@ export class AuthService {
       tenantId: user.tenant_id,
     });
 
-    // In MVP, return the OTP for testing convenience
-    return { message: 'OTP sent successfully', otp };
+    // Deliver OTP via configured sender (SMS in production, console log in dev)
+    const sendResult = await this.otpSender.send(phone, otp);
+
+    // Only include the OTP in the response when the mock sender returns it
+    // (i.e., in development / testing). SnsOtpSender never sets devOtp.
+    if (sendResult.devOtp !== undefined) {
+      return { message: 'OTP sent successfully', otp: sendResult.devOtp };
+    }
+    return { message: 'OTP sent successfully' };
   }
 
   /**

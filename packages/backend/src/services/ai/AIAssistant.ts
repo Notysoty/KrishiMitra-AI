@@ -3,6 +3,9 @@ import { AIResponse, Citation } from '../../types/ai';
 import { SafetyRefusal } from '../../types/errors';
 import { SafetyGuardrail } from './SafetyGuardrail';
 import { RAGSystem, RetrievedDocument, MockEmbeddingService } from './RAGSystem';
+import { BedrockLLMClient, isBedrockConfigured } from './BedrockLLMClient';
+import { BedrockEmbeddingService } from './BedrockEmbeddingService';
+import { BedrockAgentLLMClient, isAgentConfigured } from './BedrockAgentClient';
 
 // ── LLM Client Interface ────────────────────────────────────────
 
@@ -11,6 +14,7 @@ export interface LLMGenerateParams {
   documents: RetrievedDocument[];
   systemPrompt: string;
   language: string;
+  history?: ConversationMessage[];
 }
 
 export interface LLMResult {
@@ -40,11 +44,23 @@ export class MockLLMClient implements LLMClient {
 
 // ── User Context ────────────────────────────────────────────────
 
+export interface ConversationMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 export interface UserContext {
   userId: string;
   tenantId: string;
   language: string;
+  userName?: string;
+  history?: ConversationMessage[];
   farm?: {
+    farmName?: string;
+    state?: string;
+    district?: string;
+    soilType?: string;
+    irrigationType?: string;
     location?: { latitude: number; longitude: number };
     crops?: string[];
     irrigation_type?: string;
@@ -179,8 +195,12 @@ export class AIAssistant {
   private logger: InteractionLogger;
 
   constructor(
-    llmClient: LLMClient = new MockLLMClient(),
-    ragSystem: RAGSystem = new RAGSystem(new MockEmbeddingService()),
+    llmClient: LLMClient = isAgentConfigured()
+      ? new BedrockAgentLLMClient()
+      : isBedrockConfigured() ? new BedrockLLMClient() : new MockLLMClient(),
+    ragSystem: RAGSystem = new RAGSystem(
+      isBedrockConfigured() ? new BedrockEmbeddingService() : new MockEmbeddingService(),
+    ),
     safetyGuardrail: SafetyGuardrail = new SafetyGuardrail(),
     rateLimiter: RateLimiter = new RateLimiter(),
     logger: InteractionLogger = new InteractionLogger(),
@@ -235,6 +255,7 @@ export class AIAssistant {
       documents,
       systemPrompt,
       language: context.language,
+      history: context.history ?? [],
     });
 
     // 5. Calculate confidence
@@ -244,29 +265,17 @@ export class AIAssistant {
     const citations = RAGSystem.buildCitations(documents);
     const sources = documents.map((d) => d.source);
 
-    // 7. Threshold-based response handling
-    if (confidence < 0.5) {
-      const text = "I don't have enough information to answer this question reliably";
-      this.logInteraction(query, context, text, confidence, citations.length, false);
-      return {
-        text,
-        confidence,
-        citations,
-        disclaimer: EDUCATIONAL_DISCLAIMER,
-        sources,
-      };
-    }
-
+    // 7. Build disclaimer based on whether RAG context was available
     let responseText = llmResult.text;
     let disclaimer = EDUCATIONAL_DISCLAIMER;
 
-    if (confidence < 0.7) {
+    if (documents.length === 0) {
+      // LLM answered from general knowledge — no knowledge base match
       disclaimer =
-        'I am uncertain about this answer. Please consult a local agricultural expert. ' +
+        'This answer is based on general agricultural knowledge. ' +
         EDUCATIONAL_DISCLAIMER;
     }
 
-    // 8. Log interaction
     this.logInteraction(query, context, responseText, confidence, citations.length, false);
 
     return {
@@ -284,21 +293,41 @@ export class AIAssistant {
    * Build the system prompt with safety rules, language context, and farm context.
    */
   buildSystemPrompt(context: UserContext): string {
-    const farmContext = context.farm
-      ? `\nUser's farm context: crops=${(context.farm.crops ?? []).join(', ')}, irrigation=${context.farm.irrigation_type ?? 'unknown'}`
+    const farm = context.farm;
+    const farmerName = context.userName ? `\n- Name: ${context.userName}` : '';
+    const location = farm?.district && farm?.state
+      ? `\n- Location: ${farm.district}, ${farm.state}`
+      : farm?.state ? `\n- Location: ${farm.state}` : '';
+    const crops = (farm?.crops ?? []).length > 0
+      ? `\n- Crops: ${farm!.crops!.join(', ')}`
+      : '';
+    const soilType = farm?.soilType ? `\n- Soil Type: ${farm.soilType}` : '';
+    const irrigation = (farm?.irrigationType || farm?.irrigation_type)
+      ? `\n- Irrigation: ${farm!.irrigationType ?? farm!.irrigation_type}`
+      : '';
+    const farmName = farm?.farmName ? `\n- Farm: ${farm.farmName}` : '';
+
+    const farmerProfile = (farmerName || location || crops || soilType || irrigation || farmName)
+      ? `\nFarmer Profile:${farmerName}${farmName}${location}${crops}${soilType}${irrigation}\n`
       : '';
 
-    return `You are an agricultural assistant for farmers in India.
+    const langMap: Record<string, string> = {
+      hi: 'Hindi', mr: 'Marathi', ta: 'Tamil', te: 'Telugu', kn: 'Kannada', en: 'English',
+    };
+    const langName = langMap[context.language] ?? context.language;
 
-Rules:
-- NEVER provide specific chemical dosages, mixing ratios, or application instructions
-- ALWAYS recommend consulting licensed agronomists for chemical treatments
-- If uncertain, explicitly state uncertainty
-- Provide citations for factual claims
-- Use simple language appropriate for farmers
-- Respond in ${context.language}${farmContext}
-
-When asked about chemicals or pesticides, respond with general information only and recommend consulting experts.`;
+    return `You are KrishiMitra, a trusted AI farming advisor for Indian farmers. You speak like a knowledgeable friend — warm, practical, and respectful.
+${farmerProfile}
+Instructions:
+- Always respond in ${langName}. If the farmer wrote in Hindi/Marathi/Telugu/Tamil/Kannada, reply in the same language.
+- Give practical, specific advice based on the farmer's crops, soil, and location when available.
+- For disease or pest issues: describe visible symptoms, suggest organic/IPM treatments first, then recommend consulting local KVK (Krishi Vigyan Kendra) for chemical treatments.
+- For market questions: mention seasonal trends and nearby mandis when possible.
+- For government schemes: explain eligibility clearly in simple terms.
+- Use bullet points and short paragraphs for easy reading.
+- Never provide specific chemical dosages or mixing ratios — always recommend consulting a licensed agronomist.
+- If uncertain, say so clearly and recommend the local agricultural office.
+- Keep responses concise but complete — farmers are busy people.`;
   }
 
   // ── Confidence Scoring ──────────────────────────────────────
@@ -315,7 +344,7 @@ When asked about chemicals or pesticides, respond with general information only 
    */
   static calculateConfidence(documents: RetrievedDocument[]): number {
     if (documents.length === 0) {
-      return 0.3; // Low confidence with no documents
+      return 0.65; // LLM answers from general knowledge — medium confidence
     }
 
     let confidence = 0.5; // Base confidence

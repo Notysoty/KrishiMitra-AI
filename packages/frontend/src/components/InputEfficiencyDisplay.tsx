@@ -5,10 +5,16 @@ interface Props {
   data: InputEfficiencyData | null;
 }
 
-const ratingColors: Record<string, string> = {
-  'High Efficiency': '#2e7d32',
-  'Medium Efficiency': '#f9a825',
-  'Low Efficiency': '#c62828',
+const ratingBadgeClass: Record<string, string> = {
+  'High Efficiency': 'badge badge-green',
+  'Medium Efficiency': 'badge badge-yellow',
+  'Low Efficiency': 'badge badge-red',
+};
+
+const ratingBarColor: Record<string, string> = {
+  'High Efficiency': 'var(--primary)',
+  'Medium Efficiency': 'var(--warning)',
+  'Low Efficiency': 'var(--danger)',
 };
 
 function formatINR(amount: number): string {
@@ -22,8 +28,9 @@ function formatDate(iso: string): string {
 export const InputEfficiencyDisplay: React.FC<Props> = ({ data }) => {
   if (!data) {
     return (
-      <div data-testid="input-efficiency-unavailable" style={{ padding: 16, color: '#888' }}>
-        Input efficiency data is currently unavailable.
+      <div data-testid="input-efficiency-unavailable" className="empty-state">
+        <div className="empty-icon">📊</div>
+        <div className="empty-text">Input efficiency data is currently unavailable.</div>
       </div>
     );
   }
@@ -35,43 +42,38 @@ export const InputEfficiencyDisplay: React.FC<Props> = ({ data }) => {
   const benchMaxPercent = (benchmark_range.max / maxVal) * 100;
 
   return (
-    <div data-testid="input-efficiency-display" style={{ padding: 16 }}>
-      <h3>Input Cost / Yield Tracking</h3>
+    <div data-testid="input-efficiency-display" className="card-body">
+      <h3>📊 Input Cost / Yield Tracking</h3>
 
-      <div data-testid="input-last-updated" style={{ fontSize: 12, color: '#666', marginBottom: 8 }}>
+      <div data-testid="input-last-updated" style={{ fontSize: '0.75rem', color: 'var(--gray-500)', marginBottom: 8, marginTop: 4 }}>
         Last Updated: {formatDate(last_updated)}
       </div>
 
-      <div data-testid="input-rating" style={{
-        display: 'inline-block', padding: '4px 12px', borderRadius: 12,
-        fontWeight: 600, fontSize: 14, color: '#fff',
-        backgroundColor: ratingColors[rating] || '#666',
-      }}>
+      <div data-testid="input-rating" className={ratingBadgeClass[rating] || 'badge badge-gray'}>
         {rating}
       </div>
 
-      <div data-testid="input-confidence" style={{ fontSize: 12, color: '#888', marginTop: 4 }}>
+      <div data-testid="input-confidence" className="badge badge-gray" style={{ marginLeft: 8 }}>
         Confidence: {confidence.charAt(0).toUpperCase() + confidence.slice(1)}
       </div>
 
-      <div data-testid="input-explanation" style={{ marginTop: 12, fontSize: 13, color: '#333', lineHeight: 1.5 }}>
+      <div data-testid="input-explanation" style={{ marginTop: 16, fontSize: '0.8125rem', color: 'var(--gray-700)', lineHeight: 1.6 }}>
         {explanation}
       </div>
 
-      {/* Visual bar chart */}
-      <div data-testid="input-chart" style={{ marginTop: 16 }}>
-        <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 4 }}>Cost per kg vs Benchmark</div>
-        <div style={{ position: 'relative', height: 32, backgroundColor: '#e0e0e0', borderRadius: 4 }}>
+      <div data-testid="input-chart" style={{ marginTop: 20 }}>
+        <div style={{ fontSize: '0.75rem', fontWeight: 600, marginBottom: 6, color: 'var(--gray-600)' }}>Cost per kg vs Benchmark</div>
+        <div className="progress-bar" style={{ height: 32, position: 'relative' }}>
           <div style={{
             position: 'absolute', left: `${benchMinPercent}%`, width: `${benchMaxPercent - benchMinPercent}%`,
-            height: '100%', backgroundColor: '#c8e6c9', borderRadius: 4, opacity: 0.7,
+            height: '100%', backgroundColor: 'var(--primary-100)', borderRadius: 'var(--radius-full)', opacity: 0.7,
           }} />
-          <div style={{
+          <div className="progress-fill" style={{
             position: 'absolute', left: 0, width: `${costPercent}%`, height: '100%',
-            backgroundColor: ratingColors[rating] || '#1976d2', borderRadius: 4, opacity: 0.8,
+            background: ratingBarColor[rating] || 'var(--accent)',
           }} />
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#888', marginTop: 2 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6875rem', color: 'var(--gray-500)', marginTop: 4 }}>
           <span>₹0</span>
           <span>Your cost: {formatINR(cost_per_kg)}/kg</span>
           <span>Benchmark: {formatINR(benchmark_range.min)}-{formatINR(benchmark_range.max)}/kg</span>
@@ -79,10 +81,10 @@ export const InputEfficiencyDisplay: React.FC<Props> = ({ data }) => {
       </div>
 
       {potential_savings != null && potential_savings > 0 && (
-        <div data-testid="potential-savings" style={{ marginTop: 16, padding: 12, backgroundColor: '#e3f2fd', borderRadius: 8 }}>
-          <div style={{ fontWeight: 600, fontSize: 13 }}>
+        <div data-testid="potential-savings" className="alert-box alert-info" style={{ marginTop: 20 }}>
+          <span style={{ fontWeight: 600, fontSize: '0.8125rem' }}>
             💰 Estimated Potential Savings: {formatINR(potential_savings)}
-          </div>
+          </span>
         </div>
       )}
     </div>
