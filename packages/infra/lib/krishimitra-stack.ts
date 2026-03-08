@@ -181,32 +181,65 @@ export class KrishiMitraStack extends cdk.Stack {
   }
 
   // ── Secrets Manager ─────────────────────────────────────────────────────────
-  // Import existing secrets (already created; Secrets Manager holds deletion for 7 days so
-  // they survive a failed stack rollback and must be referenced rather than recreated).
+  // RETAIN policy ensures secrets survive CloudFormation rollbacks so they never
+  // conflict on re-deploy (avoids "secret already exists / pending deletion" errors).
   private createSecrets() {
-    const dbCredentials = secretsmanager.Secret.fromSecretNameV2(
-      this, 'DbCredentials', 'krishimitra/db-credentials/primary'
-    );
+    const dbCredentials = new secretsmanager.Secret(this, 'DbCredentials', {
+      secretName: 'krishimitra/db-credentials/primary',
+      description: 'RDS PostgreSQL master credentials',
+      generateSecretString: {
+        secretStringTemplate: JSON.stringify({ username: 'krishimitra_admin' }),
+        generateStringKey: 'password',
+        excludePunctuation: true,
+        passwordLength: 32,
+      },
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+    });
 
-    const aiService = secretsmanager.Secret.fromSecretNameV2(
-      this, 'AiServiceSecrets', 'krishimitra/ai-service/api-keys'
-    );
+    const aiService = new secretsmanager.Secret(this, 'AiServiceSecrets', {
+      secretName: 'krishimitra/ai-service/api-keys',
+      description: 'AI service API keys',
+      secretStringValue: cdk.SecretValue.unsafePlainText(
+        JSON.stringify({ openai_api_key: 'REPLACE_ME', azure_openai_key: 'REPLACE_ME' })
+      ),
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+    });
 
-    const authService = secretsmanager.Secret.fromSecretNameV2(
-      this, 'AuthServiceSecrets', 'krishimitra/auth-service/otp-provider'
-    );
+    const authService = new secretsmanager.Secret(this, 'AuthServiceSecrets', {
+      secretName: 'krishimitra/auth-service/otp-provider',
+      description: 'OTP provider credentials and JWT signing secret',
+      secretStringValue: cdk.SecretValue.unsafePlainText(
+        JSON.stringify({ otp_provider_key: 'REPLACE_ME', jwt_secret: 'REPLACE_ME' })
+      ),
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+    });
 
-    const farmService = secretsmanager.Secret.fromSecretNameV2(
-      this, 'FarmServiceSecrets', 'krishimitra/farm-service/config'
-    );
+    const farmService = new secretsmanager.Secret(this, 'FarmServiceSecrets', {
+      secretName: 'krishimitra/farm-service/config',
+      description: 'Farm service configuration secrets',
+      secretStringValue: cdk.SecretValue.unsafePlainText(
+        JSON.stringify({ encryption_key: 'REPLACE_ME' })
+      ),
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+    });
 
-    const etlService = secretsmanager.Secret.fromSecretNameV2(
-      this, 'EtlServiceSecrets', 'krishimitra/etl-service/api-keys'
-    );
+    const etlService = new secretsmanager.Secret(this, 'EtlServiceSecrets', {
+      secretName: 'krishimitra/etl-service/api-keys',
+      description: 'External data source API keys for ETL pipelines',
+      secretStringValue: cdk.SecretValue.unsafePlainText(
+        JSON.stringify({ weather_api_key: 'REPLACE_ME', market_data_key: 'REPLACE_ME' })
+      ),
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+    });
 
-    const adminService = secretsmanager.Secret.fromSecretNameV2(
-      this, 'AdminServiceSecrets', 'krishimitra/admin-service/config'
-    );
+    const adminService = new secretsmanager.Secret(this, 'AdminServiceSecrets', {
+      secretName: 'krishimitra/admin-service/config',
+      description: 'Admin service configuration secrets',
+      secretStringValue: cdk.SecretValue.unsafePlainText(
+        JSON.stringify({ smtp_password: 'REPLACE_ME' })
+      ),
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+    });
 
     return { dbCredentials, aiService, authService, farmService, etlService, adminService };
   }
