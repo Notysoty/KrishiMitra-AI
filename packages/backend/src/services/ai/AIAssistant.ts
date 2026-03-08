@@ -6,6 +6,7 @@ import { RAGSystem, RetrievedDocument, MockEmbeddingService } from './RAGSystem'
 import { BedrockLLMClient, isBedrockConfigured } from './BedrockLLMClient';
 import { BedrockEmbeddingService } from './BedrockEmbeddingService';
 import { BedrockAgentLLMClient, isAgentConfigured } from './BedrockAgentClient';
+import { BedrockKBRetriever, isKBConfigured } from './BedrockKBRetriever';
 
 // ── LLM Client Interface ────────────────────────────────────────
 
@@ -190,6 +191,7 @@ const EDUCATIONAL_DISCLAIMER =
 export class AIAssistant {
   private llmClient: LLMClient;
   private ragSystem: RAGSystem;
+  private kbRetriever: BedrockKBRetriever | null;
   private safetyGuardrail: SafetyGuardrail;
   private rateLimiter: RateLimiter;
   private logger: InteractionLogger;
@@ -207,6 +209,7 @@ export class AIAssistant {
   ) {
     this.llmClient = llmClient;
     this.ragSystem = ragSystem;
+    this.kbRetriever = isKBConfigured() && !isAgentConfigured() ? new BedrockKBRetriever() : null;
     this.safetyGuardrail = safetyGuardrail;
     this.rateLimiter = rateLimiter;
     this.logger = logger;
@@ -239,10 +242,20 @@ export class AIAssistant {
       };
     }
 
-    // 3. RAG retrieval
+    // 3. RAG retrieval — pgvector + Bedrock KB (when configured)
     let documents: RetrievedDocument[] = [];
     try {
-      documents = await this.ragSystem.retrieve(query, context.tenantId);
+      const [pgDocs, kbDocs] = await Promise.all([
+        this.ragSystem.retrieve(query, context.tenantId),
+        this.kbRetriever ? this.kbRetriever.retrieve(query, 5) : Promise.resolve([]),
+      ]);
+      // Merge: KB results first (higher quality), then pgvector; dedupe by content
+      const seen = new Set<string>();
+      for (const doc of [...kbDocs, ...pgDocs]) {
+        const key = doc.content.slice(0, 80);
+        if (!seen.has(key)) { seen.add(key); documents.push(doc); }
+      }
+      documents = documents.slice(0, 10); // Cap at 10 for prompt budget
     } catch {
       // Graceful degradation: continue without RAG results
       documents = [];
