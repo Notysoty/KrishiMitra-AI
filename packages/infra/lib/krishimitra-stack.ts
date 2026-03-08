@@ -600,11 +600,12 @@ export class KrishiMitraStack extends cdk.Stack {
       endpointTypes: [apigateway.EndpointType.REGIONAL],
     });
 
-    // Associate WAF with API Gateway stage
-    new wafv2.CfnWebACLAssociation(this, 'ApiWafAssociation', {
+    // Associate WAF with API Gateway stage — must wait for stage to exist
+    const wafAssociation = new wafv2.CfnWebACLAssociation(this, 'ApiWafAssociation', {
       resourceArn: `arn:aws:apigateway:${this.region}::/restapis/${restApi.restApiId}/stages/v1`,
       webAclArn: webAcl.attrArn,
     });
+    wafAssociation.node.addDependency(restApi.deploymentStage);
 
     // Route groups — proxy to ECS via VPC Link (placeholder HTTP integration)
     const apiRoutes = [
