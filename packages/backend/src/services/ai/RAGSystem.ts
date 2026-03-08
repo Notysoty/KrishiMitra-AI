@@ -43,7 +43,7 @@ export type ContentFormat = 'text' | 'pdf' | 'structured';
  * for a mock during MVP / testing.
  */
 export interface EmbeddingService {
-  embed(text: string): Promise<number[]>;
+  embed(text: string, inputType?: 'search_document' | 'search_query'): Promise<number[]>;
   readonly dimensions: number;
 }
 
@@ -141,7 +141,7 @@ export class RAGSystem {
     const topK = options.topK ?? 5;
     const minScore = options.minScore ?? 0.0;
 
-    const queryEmbedding = await this.embeddings.embed(query);
+    const queryEmbedding = await this.embeddings.embed(query, 'search_query');
     const vecLiteral = `[${queryEmbedding.join(',')}]`;
 
     const sql = `
@@ -206,7 +206,7 @@ export class RAGSystem {
     // Chunk the content and combine for a single embedding per article (MVP).
     const chunks = RAGSystem.chunkText(row.content);
     const combinedText = chunks.map((c) => c.text).join(' ');
-    const embedding = await this.embeddings.embed(combinedText);
+    const embedding = await this.embeddings.embed(combinedText, 'search_document');
     const vecLiteral = `[${embedding.join(',')}]`;
 
     await this.repo.query(
@@ -238,7 +238,7 @@ export class RAGSystem {
     // Generate embedding from extracted text
     const chunks = RAGSystem.chunkText(textContent);
     const combinedText = chunks.map((c) => c.text).join(' ');
-    const embedding = await this.embeddings.embed(combinedText);
+    const embedding = await this.embeddings.embed(combinedText, 'search_document');
     const vecLiteral = `[${embedding.join(',')}]`;
 
     await this.repo.query(
