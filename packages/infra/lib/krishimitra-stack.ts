@@ -298,62 +298,25 @@ export class KrishiMitraStack extends cdk.Stack {
   }
 
   // ── S3 Buckets ───────────────────────────────────────────────────────────────
-  private createBuckets(replicaRegion: string) {
-    const replicationRole = new iam.Role(this, 'S3ReplicationRole', {
-      assumedBy: new iam.ServicePrincipal('s3.amazonaws.com'),
-      description: 'Role for S3 cross-region replication',
-    });
-
-    const commonBucketProps: Partial<s3.BucketProps> = {
-      encryption: s3.BucketEncryption.S3_MANAGED,
-      enforceSSL: true,
-      versioned: true,
-      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
-      removalPolicy: cdk.RemovalPolicy.RETAIN,
-    };
-
+  // All buckets are imported (already exist from previous deploy attempts or manual creation)
+  private createBuckets(_replicaRegion: string) {
     // Knowledge base bucket — import existing bucket (already created manually)
     const knowledge = s3.Bucket.fromBucketName(
       this, 'KnowledgeBaseBucket',
       `krishimitra-knowledge-base-${this.account}`,
     );
 
-    // User uploads bucket — crop images, disease classification inputs
-    const uploads = new s3.Bucket(this, 'UserUploadsBucket', {
-      ...commonBucketProps,
-      bucketName: `krishimitra-user-uploads-${this.account}`,
-      lifecycleRules: [
-        {
-          id: 'expire-old-uploads',
-          expiration: cdk.Duration.days(365 * 3), // 3-year retention per privacy policy
-          noncurrentVersionExpiration: cdk.Duration.days(90),
-        },
-      ],
-      cors: [
-        {
-          allowedMethods: [s3.HttpMethods.GET, s3.HttpMethods.PUT, s3.HttpMethods.POST],
-          allowedOrigins: ['*'],
-          allowedHeaders: ['*'],
-          maxAge: 3000,
-        },
-      ],
-    });
+    // User uploads bucket — import existing (already created during first deploy attempt)
+    const uploads = s3.Bucket.fromBucketName(
+      this, 'UserUploadsBucket',
+      `krishimitra-user-uploads-${this.account}`,
+    );
 
-    // Backups bucket — RDS snapshots exports, data exports
-    const backups = new s3.Bucket(this, 'BackupsBucket', {
-      ...commonBucketProps,
-      bucketName: `krishimitra-backups-${this.account}`,
-      lifecycleRules: [
-        {
-          id: 'transition-backups',
-          transitions: [
-            { storageClass: s3.StorageClass.INFREQUENT_ACCESS, transitionAfter: cdk.Duration.days(30) },
-            { storageClass: s3.StorageClass.GLACIER, transitionAfter: cdk.Duration.days(90) },
-          ],
-          expiration: cdk.Duration.days(365 * 3),
-        },
-      ],
-    });
+    // Backups bucket — import existing (already created during first deploy attempt)
+    const backups = s3.Bucket.fromBucketName(
+      this, 'BackupsBucket',
+      `krishimitra-backups-${this.account}`,
+    );
 
     // Frontend PWA static assets bucket — import existing bucket (already created)
     const frontend = s3.Bucket.fromBucketName(
