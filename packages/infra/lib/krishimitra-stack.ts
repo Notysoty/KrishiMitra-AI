@@ -148,25 +148,25 @@ export class KrishiMitraStack extends cdk.Stack {
   private createSecurityGroups(vpc: ec2.Vpc) {
     const rds = new ec2.SecurityGroup(this, 'RdsSg', {
       vpc,
-      description: 'RDS PostgreSQL — allow inbound from ECS tasks only',
+      description: 'RDS PostgreSQL - allow inbound from ECS tasks only',
       allowAllOutbound: false,
     });
 
     const redis = new ec2.SecurityGroup(this, 'RedisSg', {
       vpc,
-      description: 'ElastiCache Redis — allow inbound from ECS tasks only',
+      description: 'ElastiCache Redis - allow inbound from ECS tasks only',
       allowAllOutbound: false,
     });
 
     const ecs = new ec2.SecurityGroup(this, 'EcsSg', {
       vpc,
-      description: 'ECS Fargate tasks — allow outbound to RDS, Redis, and internet',
+      description: 'ECS Fargate tasks - allow outbound to RDS, Redis, and internet',
       allowAllOutbound: true,
     });
 
     const alb = new ec2.SecurityGroup(this, 'AlbSg', {
       vpc,
-      description: 'ALB — allow inbound HTTPS from internet',
+      description: 'ALB - allow inbound HTTPS from internet',
       allowAllOutbound: true,
     });
     alb.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(443), 'HTTPS from internet');
