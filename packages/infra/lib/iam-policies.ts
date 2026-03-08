@@ -54,7 +54,7 @@ export class KrishiMitraIamPolicies extends Construct {
     const role = new iam.Role(this, 'EcsExecutionRole', {
       roleName: 'krishimitra-ecs-execution-role',
       assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
-      description: 'ECS task execution role — ECR pull, CloudWatch logs, Secrets injection',
+      description: 'ECS task execution role - ECR pull, CloudWatch logs, Secrets injection',
       managedPolicies: [
         iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AmazonECSTaskExecutionRolePolicy'),
       ],
@@ -77,7 +77,7 @@ export class KrishiMitraIamPolicies extends Construct {
     const role = new iam.Role(this, 'AuthTaskRole', {
       roleName: 'krishimitra-auth-task-role',
       assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
-      description: 'Auth service — Secrets Manager for OTP provider and JWT secret',
+      description: 'Auth service - Secrets Manager for OTP provider and JWT secret',
     });
 
     authSecret.grantRead(role);
@@ -98,7 +98,7 @@ export class KrishiMitraIamPolicies extends Construct {
     const role = new iam.Role(this, 'FarmTaskRole', {
       roleName: 'krishimitra-farm-task-role',
       assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
-      description: 'Farm service — read/write user uploads bucket',
+      description: 'Farm service - read/write user uploads bucket',
     });
 
     uploadsBucket.grantReadWrite(role);
@@ -120,7 +120,7 @@ export class KrishiMitraIamPolicies extends Construct {
     const role = new iam.Role(this, 'AiTaskRole', {
       roleName: 'krishimitra-ai-task-role',
       assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
-      description: 'AI service — read-only knowledge base, Secrets Manager for API keys',
+      description: 'AI service - read-only knowledge base, Secrets Manager for API keys',
     });
 
     knowledgeBucket.grantRead(role);
@@ -138,7 +138,7 @@ export class KrishiMitraIamPolicies extends Construct {
     const role = new iam.Role(this, 'EtlTaskRole', {
       roleName: 'krishimitra-etl-task-role',
       assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
-      description: 'ETL service — write to market/weather data buckets',
+      description: 'ETL service - write to market/weather data buckets',
     });
 
     // ETL writes to dynamically-named data buckets; grant via inline policy
@@ -175,7 +175,7 @@ export class KrishiMitraIamPolicies extends Construct {
     const role = new iam.Role(this, 'AdminTaskRole', {
       roleName: 'krishimitra-admin-task-role',
       assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
-      description: 'Admin service — read all buckets for export, write backups',
+      description: 'Admin service - read all buckets for export, write backups',
     });
 
     knowledgeBucket.grantRead(role);

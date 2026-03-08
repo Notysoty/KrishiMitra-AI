@@ -120,8 +120,8 @@ export class KrishiMitraStack extends cdk.Stack {
   // ── VPC & Networking ────────────────────────────────────────────────────────
   private createVpc(): ec2.Vpc {
     return new ec2.Vpc(this, 'KrishiMitraVpc', {
-      maxAzs: 3,
-      natGateways: 2, // One per AZ for HA; reduce to 1 for cost savings in non-prod
+      maxAzs: 2,
+      natGateways: 1, // Single NAT gateway to stay within EIP limits
       subnetConfiguration: [
         {
           name: 'Public',
@@ -247,7 +247,7 @@ export class KrishiMitraStack extends cdk.Stack {
       engine: rds.DatabaseInstanceEngine.postgres({
         version: rds.PostgresEngineVersion.VER_15_4,
       }),
-      description: 'KrishiMitra RDS parameter group — enables pgvector',
+      description: 'KrishiMitra RDS parameter group - enables pgvector',
       parameters: {
         'shared_preload_libraries': 'pg_stat_statements',
         'log_min_duration_statement': '2000', // Log queries > 2s
