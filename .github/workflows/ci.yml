@@ -29,27 +29,17 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
-      - name: Install root dependencies
+      - name: Install dependencies
         run: npm ci
-
-      - name: Install backend dependencies
-        run: npm ci
-        working-directory: packages/backend
-
-      - name: Install frontend dependencies
-        run: npm ci
-        working-directory: packages/frontend
 
       - name: Run backend unit tests with coverage
-        run: npm test -- --coverage --coverageReporters=text --coverageReporters=lcov --passWithNoTests
-        working-directory: packages/backend
+        run: npm test --workspace=packages/backend -- --coverage --coverageReporters=text --coverageReporters=lcov --passWithNoTests
         env:
           CI: true
           NODE_ENV: test
 
       - name: Run frontend unit tests
-        run: npm test -- --watchAll=false --passWithNoTests
-        working-directory: packages/frontend
+        run: npm test --workspace=packages/frontend -- --watchAll=false --passWithNoTests
         env:
           CI: true
 
@@ -81,21 +71,14 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
-      - name: Install root dependencies
+      - name: Install dependencies
         run: npm ci
-
-      - name: Install backend dependencies
-        run: npm ci
-        working-directory: packages/backend
 
       - name: Run property-based tests (fast-check)
-        # Run only files matching the property test naming convention
-        run: npm test -- --testPathPattern="\.property\.test\.ts$" --passWithNoTests
-        working-directory: packages/backend
+        run: npm test --workspace=packages/backend -- --testPathPattern="\.property\.test\.ts$" --passWithNoTests
         env:
           CI: true
           NODE_ENV: test
-          # Increase fast-check runs for thorough property exploration
           FC_NUM_RUNS: '200'
 
   # ─────────────────────────────────────────────────────────────────────────────
@@ -143,23 +126,17 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
-      - name: Install root dependencies
+      - name: Install dependencies
         run: npm ci
-
-      - name: Install backend dependencies
-        run: npm ci
-        working-directory: packages/backend
 
       - name: Run database migrations
-        run: npm run db:migrate || true
-        working-directory: packages/backend
+        run: npm run migrate --workspace=packages/backend || true
         env:
           DATABASE_URL: postgresql://krishimitra:testpassword@localhost:5432/krishimitra_test
           NODE_ENV: test
 
       - name: Run integration tests
-        run: npm test -- --testPathPattern="\.integration\.test\.ts$" --passWithNoTests
-        working-directory: packages/backend
+        run: npm test --workspace=packages/backend -- --testPathPattern="\.integration\.test\.ts$" --passWithNoTests
         env:
           CI: true
           NODE_ENV: test
@@ -186,16 +163,8 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
-      - name: Install root dependencies
+      - name: Install dependencies
         run: npm ci
-
-      - name: Install backend dependencies
-        run: npm ci
-        working-directory: packages/backend
-
-      - name: Install frontend dependencies
-        run: npm ci
-        working-directory: packages/frontend
 
       - name: npm audit — backend
         run: npm audit --audit-level=high
@@ -208,12 +177,10 @@ jobs:
         continue-on-error: true
 
       - name: Run ESLint security checks — backend
-        run: npm run lint || true
-        working-directory: packages/backend
+        run: npm run lint --workspace=packages/backend || true
 
       - name: Run ESLint security checks — frontend
-        run: npm run lint || true
-        working-directory: packages/frontend
+        run: npm run lint --workspace=packages/frontend || true
 
       - name: Check for hardcoded secrets (gitleaks)
         uses: gitleaks/gitleaks-action@v2
