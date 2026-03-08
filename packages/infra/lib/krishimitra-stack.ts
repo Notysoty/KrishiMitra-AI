@@ -337,41 +337,11 @@ export class KrishiMitraStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.RETAIN,
     };
 
-    // Knowledge base bucket — stores RAG documents, PDFs, structured data
-    const knowledge = new s3.Bucket(this, 'KnowledgeBaseBucket', {
-      ...commonBucketProps,
-      bucketName: `krishimitra-knowledge-base-${this.account}`,
-      lifecycleRules: [
-        {
-          id: 'archive-old-versions',
-          noncurrentVersionTransitions: [
-            { storageClass: s3.StorageClass.INFREQUENT_ACCESS, transitionAfter: cdk.Duration.days(30) },
-            { storageClass: s3.StorageClass.GLACIER, transitionAfter: cdk.Duration.days(90) },
-          ],
-          noncurrentVersionExpiration: cdk.Duration.days(365),
-        },
-      ],
-      // Cross-region replication: configured via L1 escape hatch below after bucket creation
-    });
-    knowledge.grantReadWrite(replicationRole);
-
-    // Cross-region replication via L1 escape hatch (destination bucket must be pre-created in replica region)
-    const cfnKnowledge = knowledge.node.defaultChild as s3.CfnBucket;
-    cfnKnowledge.replicationConfiguration = {
-      role: replicationRole.roleArn,
-      rules: [
-        {
-          id: 'ReplicateToSingapore',
-          status: 'Enabled',
-          destination: {
-            bucket: `arn:aws:s3:::krishimitra-knowledge-base-replica-${this.account}`,
-            storageClass: 'STANDARD',
-          },
-          filter: { prefix: '' },
-          deleteMarkerReplication: { status: 'Enabled' },
-        },
-      ],
-    };
+    // Knowledge base bucket — import existing bucket (already created manually)
+    const knowledge = s3.Bucket.fromBucketName(
+      this, 'KnowledgeBaseBucket',
+      `krishimitra-knowledge-base-${this.account}`,
+    );
 
     // User uploads bucket — crop images, disease classification inputs
     const uploads = new s3.Bucket(this, 'UserUploadsBucket', {

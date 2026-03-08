@@ -5,9 +5,9 @@ import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import { Construct } from 'constructs';
 
 export interface KrishiMitraIamPoliciesProps {
-  knowledgeBucket: s3.Bucket;
-  uploadsBucket: s3.Bucket;
-  backupsBucket: s3.Bucket;
+  knowledgeBucket: s3.IBucket;
+  uploadsBucket: s3.IBucket;
+  backupsBucket: s3.IBucket;
   dbCredentialsSecret: secretsmanager.Secret;
   aiServiceSecret: secretsmanager.Secret;
   authServiceSecret: secretsmanager.Secret;
@@ -91,7 +91,7 @@ export class KrishiMitraIamPolicies extends Construct {
    * Farm Service Task Role — read/write to user-uploads S3 bucket (crop images).
    */
   private createFarmTaskRole(
-    uploadsBucket: s3.Bucket,
+    uploadsBucket: s3.IBucket,
     farmSecret: secretsmanager.Secret,
     dbCredentials: secretsmanager.Secret
   ): iam.Role {
@@ -114,7 +114,7 @@ export class KrishiMitraIamPolicies extends Construct {
    * No write access to any data bucket.
    */
   private createAiTaskRole(
-    knowledgeBucket: s3.Bucket,
+    knowledgeBucket: s3.IBucket,
     aiSecret: secretsmanager.Secret
   ): iam.Role {
     const role = new iam.Role(this, 'AiTaskRole', {
@@ -166,9 +166,9 @@ export class KrishiMitraIamPolicies extends Construct {
    * Admin Service Task Role — read all buckets for export, write to backups bucket.
    */
   private createAdminTaskRole(
-    knowledgeBucket: s3.Bucket,
-    uploadsBucket: s3.Bucket,
-    backupsBucket: s3.Bucket,
+    knowledgeBucket: s3.IBucket,
+    uploadsBucket: s3.IBucket,
+    backupsBucket: s3.IBucket,
     adminSecret: secretsmanager.Secret,
     dbCredentials: secretsmanager.Secret
   ): iam.Role {
