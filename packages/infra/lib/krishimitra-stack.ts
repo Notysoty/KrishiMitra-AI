@@ -181,57 +181,32 @@ export class KrishiMitraStack extends cdk.Stack {
   }
 
   // ── Secrets Manager ─────────────────────────────────────────────────────────
+  // Import existing secrets (already created; Secrets Manager holds deletion for 7 days so
+  // they survive a failed stack rollback and must be referenced rather than recreated).
   private createSecrets() {
-    const dbCredentials = new secretsmanager.Secret(this, 'DbCredentials', {
-      secretName: 'krishimitra/db-credentials/primary',
-      description: 'RDS PostgreSQL master credentials',
-      generateSecretString: {
-        secretStringTemplate: JSON.stringify({ username: 'krishimitra_admin' }),
-        generateStringKey: 'password',
-        excludePunctuation: true,
-        passwordLength: 32,
-      },
-    });
+    const dbCredentials = secretsmanager.Secret.fromSecretNameV2(
+      this, 'DbCredentials', 'krishimitra/db-credentials/primary'
+    );
 
-    const aiService = new secretsmanager.Secret(this, 'AiServiceSecrets', {
-      secretName: 'krishimitra/ai-service/api-keys',
-      description: 'OpenAI API key and Azure fallback credentials',
-      secretStringValue: cdk.SecretValue.unsafePlainText(
-        JSON.stringify({ openai_api_key: 'REPLACE_ME', azure_openai_key: 'REPLACE_ME' })
-      ),
-    });
+    const aiService = secretsmanager.Secret.fromSecretNameV2(
+      this, 'AiServiceSecrets', 'krishimitra/ai-service/api-keys'
+    );
 
-    const authService = new secretsmanager.Secret(this, 'AuthServiceSecrets', {
-      secretName: 'krishimitra/auth-service/otp-provider',
-      description: 'OTP provider credentials and JWT signing secret',
-      secretStringValue: cdk.SecretValue.unsafePlainText(
-        JSON.stringify({ otp_provider_key: 'REPLACE_ME', jwt_secret: 'REPLACE_ME' })
-      ),
-    });
+    const authService = secretsmanager.Secret.fromSecretNameV2(
+      this, 'AuthServiceSecrets', 'krishimitra/auth-service/otp-provider'
+    );
 
-    const farmService = new secretsmanager.Secret(this, 'FarmServiceSecrets', {
-      secretName: 'krishimitra/farm-service/config',
-      description: 'Farm service configuration secrets',
-      secretStringValue: cdk.SecretValue.unsafePlainText(
-        JSON.stringify({ encryption_key: 'REPLACE_ME' })
-      ),
-    });
+    const farmService = secretsmanager.Secret.fromSecretNameV2(
+      this, 'FarmServiceSecrets', 'krishimitra/farm-service/config'
+    );
 
-    const etlService = new secretsmanager.Secret(this, 'EtlServiceSecrets', {
-      secretName: 'krishimitra/etl-service/api-keys',
-      description: 'External data source API keys for ETL pipelines',
-      secretStringValue: cdk.SecretValue.unsafePlainText(
-        JSON.stringify({ weather_api_key: 'REPLACE_ME', market_data_key: 'REPLACE_ME' })
-      ),
-    });
+    const etlService = secretsmanager.Secret.fromSecretNameV2(
+      this, 'EtlServiceSecrets', 'krishimitra/etl-service/api-keys'
+    );
 
-    const adminService = new secretsmanager.Secret(this, 'AdminServiceSecrets', {
-      secretName: 'krishimitra/admin-service/config',
-      description: 'Admin service configuration secrets',
-      secretStringValue: cdk.SecretValue.unsafePlainText(
-        JSON.stringify({ smtp_password: 'REPLACE_ME' })
-      ),
-    });
+    const adminService = secretsmanager.Secret.fromSecretNameV2(
+      this, 'AdminServiceSecrets', 'krishimitra/admin-service/config'
+    );
 
     return { dbCredentials, aiService, authService, farmService, etlService, adminService };
   }
@@ -240,7 +215,7 @@ export class KrishiMitraStack extends cdk.Stack {
   private createDatabase(
     vpc: ec2.Vpc,
     sg: ec2.SecurityGroup,
-    credentials: secretsmanager.Secret
+    credentials: secretsmanager.ISecret
   ) {
     // Parameter group enabling pgvector extension
     const parameterGroup = new rds.ParameterGroup(this, 'RdsParamGroup', {
@@ -380,19 +355,17 @@ export class KrishiMitraStack extends cdk.Stack {
       ],
     });
 
-    // Frontend PWA static assets bucket (served via CloudFront)
-    const frontend = new s3.Bucket(this, 'FrontendBucket', {
-      ...commonBucketProps,
-      bucketName: `krishimitra-frontend-${this.account}`,
-      websiteIndexDocument: 'index.html',
-      websiteErrorDocument: 'index.html', // SPA fallback
-    });
+    // Frontend PWA static assets bucket — import existing bucket (already created)
+    const frontend = s3.Bucket.fromBucketName(
+      this, 'FrontendBucket',
+      `krishimitra-frontend-${this.account}`,
+    );
 
     return { knowledge, uploads, backups, frontend };
   }
 
   // ── CloudFront Distribution ──────────────────────────────────────────────────
-  private createCloudFront(frontendBucket: s3.Bucket) {
+  private createCloudFront(frontendBucket: s3.IBucket) {
     const oac = new cloudfront.S3OriginAccessControl(this, 'FrontendOac', {
       description: 'OAC for KrishiMitra frontend bucket',
     });
@@ -475,11 +448,10 @@ export class KrishiMitraStack extends cdk.Stack {
     ] as const;
 
     for (const svc of services) {
-      const logGroup = new logs.LogGroup(this, `${svc.name}LogGroup`, {
-        logGroupName: `/krishimitra/${svc.name}-service`,
-        retention: logs.RetentionDays.ONE_MONTH,
-        removalPolicy: cdk.RemovalPolicy.RETAIN,
-      });
+      // Import existing log group (already created during first deploy attempt)
+      const logGroup = logs.LogGroup.fromLogGroupName(
+        this, `${svc.name}LogGroup`, `/krishimitra/${svc.name}-service`
+      );
 
       const taskDef = new ecs.FargateTaskDefinition(this, `${svc.name}TaskDef`, {
         cpu: svc.cpu,
@@ -750,14 +722,10 @@ export class KrishiMitraStack extends cdk.Stack {
       ],
     });
 
-    // Log groups for each service (also created per-service in ECS, but ensure they exist)
+    // Import existing /app log groups (already created during first deploy attempt)
     const serviceNames = ['auth', 'farm', 'ai', 'market', 'etl', 'admin', 'disease'];
     for (const svc of serviceNames) {
-      new logs.LogGroup(this, `${svc}AppLogGroup`, {
-        logGroupName: `/krishimitra/${svc}-service/app`,
-        retention: logs.RetentionDays.ONE_MONTH,
-        removalPolicy: cdk.RemovalPolicy.RETAIN,
-      });
+      logs.LogGroup.fromLogGroupName(this, `${svc}AppLogGroup`, `/krishimitra/${svc}-service/app`);
     }
   }
 

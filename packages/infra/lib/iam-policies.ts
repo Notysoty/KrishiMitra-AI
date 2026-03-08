@@ -8,12 +8,12 @@ export interface KrishiMitraIamPoliciesProps {
   knowledgeBucket: s3.IBucket;
   uploadsBucket: s3.IBucket;
   backupsBucket: s3.IBucket;
-  dbCredentialsSecret: secretsmanager.Secret;
-  aiServiceSecret: secretsmanager.Secret;
-  authServiceSecret: secretsmanager.Secret;
-  farmServiceSecret: secretsmanager.Secret;
-  etlServiceSecret: secretsmanager.Secret;
-  adminServiceSecret: secretsmanager.Secret;
+  dbCredentialsSecret: secretsmanager.ISecret;
+  aiServiceSecret: secretsmanager.ISecret;
+  authServiceSecret: secretsmanager.ISecret;
+  farmServiceSecret: secretsmanager.ISecret;
+  etlServiceSecret: secretsmanager.ISecret;
+  adminServiceSecret: secretsmanager.ISecret;
 }
 
 /**
@@ -50,7 +50,7 @@ export class KrishiMitraIamPolicies extends Construct {
    * Shared ECS Task Execution Role — used by ECS agent to pull images and write logs.
    * Does NOT grant application-level permissions.
    */
-  private createEcsExecutionRole(dbCredentials: secretsmanager.Secret): iam.Role {
+  private createEcsExecutionRole(dbCredentials: secretsmanager.ISecret): iam.Role {
     const role = new iam.Role(this, 'EcsExecutionRole', {
       roleName: 'krishimitra-ecs-execution-role',
       assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
@@ -71,8 +71,8 @@ export class KrishiMitraIamPolicies extends Construct {
    * No S3 access needed.
    */
   private createAuthTaskRole(
-    authSecret: secretsmanager.Secret,
-    dbCredentials: secretsmanager.Secret
+    authSecret: secretsmanager.ISecret,
+    dbCredentials: secretsmanager.ISecret
   ): iam.Role {
     const role = new iam.Role(this, 'AuthTaskRole', {
       roleName: 'krishimitra-auth-task-role',
@@ -92,8 +92,8 @@ export class KrishiMitraIamPolicies extends Construct {
    */
   private createFarmTaskRole(
     uploadsBucket: s3.IBucket,
-    farmSecret: secretsmanager.Secret,
-    dbCredentials: secretsmanager.Secret
+    farmSecret: secretsmanager.ISecret,
+    dbCredentials: secretsmanager.ISecret
   ): iam.Role {
     const role = new iam.Role(this, 'FarmTaskRole', {
       roleName: 'krishimitra-farm-task-role',
@@ -115,7 +115,7 @@ export class KrishiMitraIamPolicies extends Construct {
    */
   private createAiTaskRole(
     knowledgeBucket: s3.IBucket,
-    aiSecret: secretsmanager.Secret
+    aiSecret: secretsmanager.ISecret
   ): iam.Role {
     const role = new iam.Role(this, 'AiTaskRole', {
       roleName: 'krishimitra-ai-task-role',
@@ -134,7 +134,7 @@ export class KrishiMitraIamPolicies extends Construct {
    * ETL Service Task Role — write access to data buckets only.
    * No access to knowledge-base or user-uploads.
    */
-  private createEtlTaskRole(etlSecret: secretsmanager.Secret): iam.Role {
+  private createEtlTaskRole(etlSecret: secretsmanager.ISecret): iam.Role {
     const role = new iam.Role(this, 'EtlTaskRole', {
       roleName: 'krishimitra-etl-task-role',
       assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
@@ -169,8 +169,8 @@ export class KrishiMitraIamPolicies extends Construct {
     knowledgeBucket: s3.IBucket,
     uploadsBucket: s3.IBucket,
     backupsBucket: s3.IBucket,
-    adminSecret: secretsmanager.Secret,
-    dbCredentials: secretsmanager.Secret
+    adminSecret: secretsmanager.ISecret,
+    dbCredentials: secretsmanager.ISecret
   ): iam.Role {
     const role = new iam.Role(this, 'AdminTaskRole', {
       roleName: 'krishimitra-admin-task-role',
