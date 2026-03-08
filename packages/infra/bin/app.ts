@@ -10,7 +10,7 @@ const replicaRegion = process.env.CDK_REPLICA_REGION ?? 'us-west-2';
 
 new KrishiMitraStack(app, 'KrishiMitraStack', {
   env: {
-    account: process.env.CDK_DEFAULT_ACCOUNT,
+    account: process.env.CDK_DEFAULT_ACCOUNT ?? '730335204711',
     region: primaryRegion,
   },
   primaryRegion,
