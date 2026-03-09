@@ -16,8 +16,10 @@ router.post('/register', async (req: Request, res: Response) => {
       res.status(400).json({ error: 'phone, name, and tenant_id are required.' });
       return;
     }
-    const user = await authService.register({ phone, name, tenant_id, email, language_preference, roles });
-    res.status(201).json(user);
+    await authService.register({ phone, name, tenant_id, email, language_preference, roles });
+    // Send OTP immediately after registration so the user can verify in one step
+    const result = await authService.login(phone, tenant_id);
+    res.status(201).json({ message: 'Account created. OTP sent to your mobile number.', ...result });
   } catch (err) {
     handleError(res, err);
   }

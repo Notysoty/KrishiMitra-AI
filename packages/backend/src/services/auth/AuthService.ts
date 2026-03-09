@@ -27,6 +27,8 @@ export interface TokenPayload {
   tenantId: string;
   roles: Role[];
   sessionId: string;
+  phone?: string;
+  name?: string;
 }
 
 export interface AuthTokens {
@@ -59,6 +61,18 @@ export function _clearStores() {
 }
 
 // ── Helpers ────────────────────────────────────────────────────
+/**
+ * Normalize Indian phone numbers to E.164 (+91XXXXXXXXXX).
+ * Accepts: 10 digits, 91XXXXXXXXXX, or +91XXXXXXXXXX.
+ */
+function normalizePhone(phone: string): string {
+  const cleaned = phone.replace(/[\s\-().]/g, '');
+  if (/^\+91\d{10}$/.test(cleaned)) return cleaned;
+  if (/^91\d{10}$/.test(cleaned)) return `+${cleaned}`;
+  if (/^\d{10}$/.test(cleaned)) return `+91${cleaned}`;
+  throw new AuthError('Invalid phone number. Use +91XXXXXXXXXX or 10-digit format.', 400);
+}
+
 function generateOtp(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
@@ -91,12 +105,8 @@ export class AuthService {
    */
   async register(input: RegisterInput) {
     const pool = getPool();
-    const { phone, name, tenant_id, email, language_preference, roles } = input;
-
-    // Validate phone format (Indian mobile: 10 digits)
-    if (!/^\d{10}$/.test(phone)) {
-      throw new AuthError('Invalid phone number. Must be 10 digits.', 400);
-    }
+    const { name, tenant_id, email, language_preference, roles } = input;
+    const phone = normalizePhone(input.phone);
 
     // Check if user already exists in this tenant
     const existing = await pool.query(
@@ -137,7 +147,8 @@ export class AuthService {
    * Initiate login by sending an OTP to the user's phone.
    * Returns a masked confirmation (does not expose OTP in production).
    */
-  async login(phone: string, tenantId: string) {
+  async login(rawPhone: string, tenantId: string) {
+    const phone = normalizePhone(rawPhone);
     // Check lockout
     const lockoutKey = `${tenantId}:${phone}`;
     const lockout = lockoutStore.get(lockoutKey);
@@ -186,12 +197,13 @@ export class AuthService {
    * Verify OTP and issue JWT tokens.
    */
   async verifyOtp(
-    phone: string,
+    rawPhone: string,
     tenantId: string,
     otp: string,
     deviceInfo?: string,
     ipAddress?: string
   ): Promise<AuthTokens> {
+    const phone = normalizePhone(rawPhone);
     const lockoutKey = `${tenantId}:${phone}`;
 
     // Check lockout
@@ -234,7 +246,7 @@ export class AuthService {
     // Fetch full user
     const pool = getPool();
     const userResult = await pool.query(
-      'SELECT id, tenant_id, roles FROM users WHERE id = $1',
+      'SELECT id, tenant_id, phone, name, roles FROM users WHERE id = $1',
       [entry.userId]
     );
     const user = userResult.rows[0];
@@ -249,6 +261,8 @@ export class AuthService {
       tenantId: user.tenant_id,
       roles: user.roles,
       sessionId,
+      phone: user.phone,
+      name: user.name,
     };
 
     const accessToken = signToken(payload, JWT_EXPIRY);
@@ -291,7 +305,7 @@ export class AuthService {
     // Verify user still exists
     const pool = getPool();
     const userResult = await pool.query(
-      'SELECT id, tenant_id, roles FROM users WHERE id = $1',
+      'SELECT id, tenant_id, phone, name, roles FROM users WHERE id = $1',
       [payload.userId]
     );
     if (userResult.rows.length === 0) {
@@ -305,6 +319,8 @@ export class AuthService {
       tenantId: user.tenant_id,
       roles: user.roles,
       sessionId,
+      phone: user.phone,
+      name: user.name,
     };
 
     const accessToken = signToken(newPayload, JWT_EXPIRY);
