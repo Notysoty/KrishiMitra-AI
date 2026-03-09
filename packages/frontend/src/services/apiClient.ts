@@ -7,6 +7,7 @@ import { getToken, refreshToken } from './authClient';
 import { enqueue } from './requestQueue';
 
 const BASE_URL = process.env.REACT_APP_API_URL ?? 'http://localhost:3000';
+const API_PREFIX = process.env.REACT_APP_API_PREFIX ?? '/api/v1';
 
 export interface AIResponse {
   text: string;
@@ -45,7 +46,7 @@ async function apiFetch(
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
-  // Don't set Content-Type for FormData — browser sets it with boundary
+  // Do not set Content-Type for FormData; browser sets it with boundary
   if (!(options.body instanceof FormData) && !headers['Content-Type']) {
     headers['Content-Type'] = 'application/json';
   }
@@ -62,14 +63,13 @@ async function apiFetch(
         if (refreshed.success && refreshed.token) {
           headers['Authorization'] = `Bearer ${refreshed.token}`;
           const retried = await fetch(url, { ...options, headers });
-          // Only redirect if refresh also fails (token truly invalid)
+          // Only redirect if refresh also fails
           if (!retried.ok && retried.status === 401) {
             throw new Error('Unauthorized');
           }
           return retried;
-        } else {
-          throw new Error('Unauthorized');
         }
+        throw new Error('Unauthorized');
       }
 
       return res;
@@ -81,7 +81,7 @@ async function apiFetch(
         throw new Error('Offline: request queued');
       }
       if (attempt < retries) {
-        await sleep(200 * Math.pow(2, attempt)); // exponential backoff: 200ms, 400ms
+        await sleep(200 * Math.pow(2, attempt));
       } else {
         throw err;
       }
@@ -107,6 +107,37 @@ export interface FarmContext {
   longitude?: number | null;
 }
 
+function createFallbackAdvice(query: string, farm?: FarmContext | null, userName?: string): AIResponse {
+  const normalizedQuery = query.toLowerCase();
+  const location = [farm?.district, farm?.state].filter(Boolean).join(', ');
+  const cropList = farm?.crops && farm.crops.length > 0 ? farm.crops.join(', ') : 'your main crop';
+  const greeting = userName ? `${userName}, ` : '';
+
+  let text: string;
+  if (/market|price|mandi|sell|rate/.test(normalizedQuery)) {
+    text = `${greeting}Demo mode is active because live assistant service is unavailable. For ${cropList}, compare rates from at least 2 nearby mandis, prioritize markets with lower transport cost, and avoid immediate sale if rates are below your last 7-day average.`;
+  } else if (/rain|weather|forecast|monsoon/.test(normalizedQuery)) {
+    text = `${greeting}Demo mode is active because live assistant service is unavailable. For the next 48 hours, avoid spraying before possible rain, keep field drainage clear, and monitor leaf wetness to reduce fungal risk.`;
+  } else if (/disease|leaf|spot|blight|pest|insect/.test(normalizedQuery)) {
+    text = `${greeting}Demo mode is active because live assistant service is unavailable. Isolate affected plants, remove heavily infected leaves, and capture clear close-up photos in daylight for final diagnosis when live assistant is restored.`;
+  } else if (/fertilizer|nutrient|urea|dap|npk/.test(normalizedQuery)) {
+    text = `${greeting}Demo mode is active because live assistant service is unavailable. Apply nutrients only after soil moisture check, split doses instead of one heavy application, and avoid fertilizer use just before expected rain.`;
+  } else {
+    text = `${greeting}Demo mode is active because live assistant service is unavailable. Share crop, growth stage, and recent weather so I can provide a tighter recommendation while backend service is being restored.`;
+  }
+
+  if (location) {
+    text += `\n\nContext used: ${location}.`;
+  }
+
+  return {
+    text,
+    confidence: 0.45,
+    citations: [],
+    disclaimer: 'Demo response shown because live assistant service is currently unreachable.',
+  };
+}
+
 export async function sendMessage(
   text: string,
   language = 'en',
@@ -119,10 +150,12 @@ export async function sendMessage(
     if (history && history.length > 0) body.history = history;
     if (farm) body.farm = farm;
     if (userName) body.userName = userName;
-    const res = await apiFetch('/api/v1/ai/chat', {
+
+    const res = await apiFetch(`${API_PREFIX}/ai/chat`, {
       method: 'POST',
       body: JSON.stringify(body),
     });
+
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     return {
@@ -141,14 +174,15 @@ export async function sendMessage(
         disclaimer: '',
       };
     }
-    throw err;
+
+    return createFallbackAdvice(text, farm, userName);
   }
 }
 
 export async function classifyImage(file: File): Promise<ClassificationResult> {
   const form = new FormData();
   form.append('image', file);
-  const res = await apiFetch('/api/v1/disease/classify', {
+  const res = await apiFetch(`${API_PREFIX}/disease/classify`, {
     method: 'POST',
     body: form,
   });
@@ -165,7 +199,7 @@ export async function classifyImage(file: File): Promise<ClassificationResult> {
 export async function speechToText(audio: Blob): Promise<string> {
   const form = new FormData();
   form.append('audio', audio, 'recording.webm');
-  const res = await apiFetch('/api/v1/ai/speech-to-text', {
+  const res = await apiFetch(`${API_PREFIX}/ai/speech-to-text`, {
     method: 'POST',
     body: form,
   });
@@ -175,7 +209,7 @@ export async function speechToText(audio: Blob): Promise<string> {
 }
 
 export async function textToSpeech(text: string): Promise<Blob> {
-  const res = await apiFetch('/api/v1/ai/text-to-speech', {
+  const res = await apiFetch(`${API_PREFIX}/ai/text-to-speech`, {
     method: 'POST',
     body: JSON.stringify({ text }),
   });
@@ -187,13 +221,13 @@ export async function checkImageQuality(file: File): Promise<ImageQualityResult>
   const form = new FormData();
   form.append('image', file);
   try {
-    const res = await apiFetch('/api/v1/disease/quality-check', {
+    const res = await apiFetch(`${API_PREFIX}/disease/quality-check`, {
       method: 'POST',
       body: form,
     });
-    if (!res.ok) return { acceptable: true }; // degrade gracefully
+    if (!res.ok) return { acceptable: true };
     return res.json();
   } catch {
-    return { acceptable: true }; // degrade gracefully when offline
+    return { acceptable: true };
   }
 }

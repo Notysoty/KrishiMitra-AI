@@ -88,20 +88,29 @@ jobs:
           REGISTRY: ${{ steps.ecr-login.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          # Create ECR repo if it doesn't exist
-          aws ecr describe-repositories --repository-names $ECR_BACKEND_REPO 2>/dev/null || \
-            aws ecr create-repository --repository-name $ECR_BACKEND_REPO \
-              --image-scanning-configuration scanOnPush=true \
-              --encryption-configuration encryptionType=AES256
+          # CDK expects one ECR repo per service — create all if they don't exist
+          SERVICE_REPOS="krishimitra-auth-service krishimitra-ai-service krishimitra-farm-service krishimitra-market-service krishimitra-etl-service krishimitra-admin-service krishimitra-disease-service"
 
-          IMAGE_URI="$REGISTRY/$ECR_BACKEND_REPO:$IMAGE_TAG"
-          docker build -t "$IMAGE_URI" -f packages/backend/Dockerfile packages/backend/ || \
-            docker build -t "$IMAGE_URI" packages/backend/
+          for REPO in $SERVICE_REPOS; do
+            aws ecr describe-repositories --repository-names "$REPO" 2>/dev/null || \
+              aws ecr create-repository --repository-name "$REPO" \
+                --image-scanning-configuration scanOnPush=true \
+                --encryption-configuration encryptionType=AES256
+          done
+
+          # Build once against the first repo
+          FIRST_REPO="krishimitra-auth-service"
+          IMAGE_URI="$REGISTRY/$FIRST_REPO:$IMAGE_TAG"
+          docker build -t "$IMAGE_URI" -f packages/backend/Dockerfile packages/backend/
           docker push "$IMAGE_URI"
 
-          # Also tag as latest
-          docker tag "$IMAGE_URI" "$REGISTRY/$ECR_BACKEND_REPO:latest"
-          docker push "$REGISTRY/$ECR_BACKEND_REPO:latest"
+          # Retag and push to every service repo (same image, all services share one monorepo backend)
+          for REPO in $SERVICE_REPOS; do
+            docker tag "$IMAGE_URI" "$REGISTRY/$REPO:$IMAGE_TAG"
+            docker tag "$IMAGE_URI" "$REGISTRY/$REPO:latest"
+            docker push "$REGISTRY/$REPO:$IMAGE_TAG"
+            docker push "$REGISTRY/$REPO:latest"
+          done
 
           echo "image=$IMAGE_URI" >> $GITHUB_OUTPUT
 
@@ -249,25 +258,32 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Force ECS service update
+      - name: Force ECS service update (all services)
         run: |
-          # Find the ECS cluster and service
-          CLUSTER=$(aws ecs list-clusters --query 'clusterArns[?contains(@, `krishimitra`)]' --output text 2>/dev/null | head -1)
-          if [ -n "$CLUSTER" ]; then
-            SERVICE=$(aws ecs list-services --cluster "$CLUSTER" --query 'serviceArns[0]' --output text 2>/dev/null)
-            if [ -n "$SERVICE" ] && [ "$SERVICE" != "None" ]; then
-              aws ecs update-service \
-                --cluster "$CLUSTER" \
-                --service "$SERVICE" \
-                --force-new-deployment \
-                --no-cli-pager
-              echo "ECS service update triggered: $SERVICE"
-            else
-              echo "No ECS service found in cluster $CLUSTER"
-            fi
-          else
-            echo "No KrishiMitra ECS cluster found — skipping ECS deploy"
+          CLUSTER=$(aws ecs list-clusters --query 'clusterArns[?contains(@, `KrishiMitra`)]' --output text 2>/dev/null | head -1)
+          if [ -z "$CLUSTER" ]; then
+            echo "No KrishiMitra ECS cluster found — skipping"
+            exit 0
           fi
+          echo "Cluster: $CLUSTER"
+
+          SERVICES=$(aws ecs list-services --cluster "$CLUSTER" --query 'serviceArns[]' --output text 2>/dev/null)
+          if [ -z "$SERVICES" ] || [ "$SERVICES" = "None" ]; then
+            echo "No services found in cluster — skipping"
+            exit 0
+          fi
+
+          for SERVICE_ARN in $SERVICES; do
+            SERVICE_NAME=$(basename "$SERVICE_ARN")
+            echo "Updating service: $SERVICE_NAME"
+            aws ecs update-service \
+              --cluster "$CLUSTER" \
+              --service "$SERVICE_ARN" \
+              --force-new-deployment \
+              --desired-count 1 \
+              --no-cli-pager
+          done
+          echo "All ECS services updated"
 
   # ─────────────────────────────────────────────────────────────────────────────
   # 6. Run DB migrations on deploy

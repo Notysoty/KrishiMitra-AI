@@ -118,18 +118,18 @@ async function seed() {
 
     console.log('Seeding tenants...');
     await client.query(`
-      INSERT INTO tenants (id, name, plan, status, created_at)
+      INSERT INTO tenants (id, name, type, status, created_at)
       VALUES
-        ($1, 'Demo Cooperative', 'professional', 'active', NOW()),
-        ($2, 'Test NGO', 'basic', 'active', NOW())
+        ($1, 'Demo Cooperative', 'cooperative', 'active', NOW()),
+        ($2, 'Test NGO', 'ngo', 'active', NOW())
       ON CONFLICT (id) DO NOTHING
     `, [TENANT_1, TENANT_2]);
 
     console.log('Seeding users...');
     for (const u of USERS) {
       await client.query(`
-        INSERT INTO users (id, tenant_id, phone, name, roles, status, created_at)
-        VALUES ($1, $2, $3, $4, ARRAY[$5], 'active', NOW())
+        INSERT INTO users (id, tenant_id, phone, name, roles, created_at)
+        VALUES ($1, $2, $3, $4, ARRAY[$5], NOW())
         ON CONFLICT (id) DO NOTHING
       `, [u.id, u.tenantId, u.phone, u.name, u.role]);
     }

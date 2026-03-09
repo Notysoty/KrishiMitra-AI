@@ -52,7 +52,6 @@ export class KrishiMitraIamPolicies extends Construct {
    */
   private createEcsExecutionRole(dbCredentials: secretsmanager.ISecret): iam.Role {
     const role = new iam.Role(this, 'EcsExecutionRole', {
-      roleName: 'krishimitra-ecs-execution-role',
       assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
       description: 'ECS task execution role - ECR pull, CloudWatch logs, Secrets injection',
       managedPolicies: [
@@ -75,7 +74,6 @@ export class KrishiMitraIamPolicies extends Construct {
     dbCredentials: secretsmanager.ISecret
   ): iam.Role {
     const role = new iam.Role(this, 'AuthTaskRole', {
-      roleName: 'krishimitra-auth-task-role',
       assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
       description: 'Auth service - Secrets Manager for OTP provider and JWT secret',
     });
@@ -96,7 +94,6 @@ export class KrishiMitraIamPolicies extends Construct {
     dbCredentials: secretsmanager.ISecret
   ): iam.Role {
     const role = new iam.Role(this, 'FarmTaskRole', {
-      roleName: 'krishimitra-farm-task-role',
       assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
       description: 'Farm service - read/write user uploads bucket',
     });
@@ -118,7 +115,6 @@ export class KrishiMitraIamPolicies extends Construct {
     aiSecret: secretsmanager.ISecret
   ): iam.Role {
     const role = new iam.Role(this, 'AiTaskRole', {
-      roleName: 'krishimitra-ai-task-role',
       assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
       description: 'AI service - read-only knowledge base, Secrets Manager for API keys',
     });
@@ -136,7 +132,6 @@ export class KrishiMitraIamPolicies extends Construct {
    */
   private createEtlTaskRole(etlSecret: secretsmanager.ISecret): iam.Role {
     const role = new iam.Role(this, 'EtlTaskRole', {
-      roleName: 'krishimitra-etl-task-role',
       assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
       description: 'ETL service - write to market/weather data buckets',
     });
@@ -173,7 +168,6 @@ export class KrishiMitraIamPolicies extends Construct {
     dbCredentials: secretsmanager.ISecret
   ): iam.Role {
     const role = new iam.Role(this, 'AdminTaskRole', {
-      roleName: 'krishimitra-admin-task-role',
       assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
       description: 'Admin service - read all buckets for export, write backups',
     });

@@ -3,7 +3,13 @@ dist/
 build/
 .env
 .env.local
+.env.production
+.env.*.local
 *.log
 coverage/
 .DS_Store
 .local
+TEARDOWN.md
+.claude/
+cdk.out/
+test-chat.js

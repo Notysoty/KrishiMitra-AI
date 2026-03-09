@@ -118,7 +118,12 @@ export class KrishiMitraStack extends cdk.Stack {
   }
 
   // ── VPC & Networking ────────────────────────────────────────────────────────
-  private createVpc(): ec2.Vpc {
+  private createVpc(): ec2.IVpc {
+    const existingVpcId = this.node.tryGetContext('existingVpcId');
+    if (existingVpcId) {
+      return ec2.Vpc.fromLookup(this, 'KrishiMitraVpcLookup', { vpcId: String(existingVpcId) });
+    }
+
     return new ec2.Vpc(this, 'KrishiMitraVpc', {
       maxAzs: 2,
       natGateways: 1, // Single NAT gateway to stay within EIP limits
@@ -145,7 +150,7 @@ export class KrishiMitraStack extends cdk.Stack {
   }
 
   // ── Security Groups ─────────────────────────────────────────────────────────
-  private createSecurityGroups(vpc: ec2.Vpc) {
+  private createSecurityGroups(vpc: ec2.IVpc) {
     const rds = new ec2.SecurityGroup(this, 'RdsSg', {
       vpc,
       description: 'RDS PostgreSQL - allow inbound from ECS tasks only',
@@ -181,79 +186,46 @@ export class KrishiMitraStack extends cdk.Stack {
   }
 
   // ── Secrets Manager ─────────────────────────────────────────────────────────
-  // RETAIN policy ensures secrets survive CloudFormation rollbacks so they never
-  // conflict on re-deploy (avoids "secret already exists / pending deletion" errors).
+  // Import existing secrets that were created during previous deploy attempts
+  // and survived rollback due to RETAIN removal policy.
   private createSecrets() {
-    const dbCredentials = new secretsmanager.Secret(this, 'DbCredentials', {
-      secretName: 'krishimitra/db-credentials/primary',
-      description: 'RDS PostgreSQL master credentials',
-      generateSecretString: {
-        secretStringTemplate: JSON.stringify({ username: 'krishimitra_admin' }),
-        generateStringKey: 'password',
-        excludePunctuation: true,
-        passwordLength: 32,
-      },
-      removalPolicy: cdk.RemovalPolicy.RETAIN,
-    });
+    const dbCredentials = secretsmanager.Secret.fromSecretNameV2(
+      this, 'DbCredentials', 'krishimitra/db-credentials/primary'
+    );
 
-    const aiService = new secretsmanager.Secret(this, 'AiServiceSecrets', {
-      secretName: 'krishimitra/ai-service/api-keys',
-      description: 'AI service API keys',
-      secretStringValue: cdk.SecretValue.unsafePlainText(
-        JSON.stringify({ openai_api_key: 'REPLACE_ME', azure_openai_key: 'REPLACE_ME' })
-      ),
-      removalPolicy: cdk.RemovalPolicy.RETAIN,
-    });
+    const aiService = secretsmanager.Secret.fromSecretNameV2(
+      this, 'AiServiceSecrets', 'krishimitra/ai-service/api-keys'
+    );
 
-    const authService = new secretsmanager.Secret(this, 'AuthServiceSecrets', {
-      secretName: 'krishimitra/auth-service/otp-provider',
-      description: 'OTP provider credentials and JWT signing secret',
-      secretStringValue: cdk.SecretValue.unsafePlainText(
-        JSON.stringify({ otp_provider_key: 'REPLACE_ME', jwt_secret: 'REPLACE_ME' })
-      ),
-      removalPolicy: cdk.RemovalPolicy.RETAIN,
-    });
+    const authService = secretsmanager.Secret.fromSecretNameV2(
+      this, 'AuthServiceSecrets', 'krishimitra/auth-service/otp-provider'
+    );
 
-    const farmService = new secretsmanager.Secret(this, 'FarmServiceSecrets', {
-      secretName: 'krishimitra/farm-service/config',
-      description: 'Farm service configuration secrets',
-      secretStringValue: cdk.SecretValue.unsafePlainText(
-        JSON.stringify({ encryption_key: 'REPLACE_ME' })
-      ),
-      removalPolicy: cdk.RemovalPolicy.RETAIN,
-    });
+    const farmService = secretsmanager.Secret.fromSecretNameV2(
+      this, 'FarmServiceSecrets', 'krishimitra/farm-service/config'
+    );
 
-    const etlService = new secretsmanager.Secret(this, 'EtlServiceSecrets', {
-      secretName: 'krishimitra/etl-service/api-keys',
-      description: 'External data source API keys for ETL pipelines',
-      secretStringValue: cdk.SecretValue.unsafePlainText(
-        JSON.stringify({ weather_api_key: 'REPLACE_ME', market_data_key: 'REPLACE_ME' })
-      ),
-      removalPolicy: cdk.RemovalPolicy.RETAIN,
-    });
+    const etlService = secretsmanager.Secret.fromSecretNameV2(
+      this, 'EtlServiceSecrets', 'krishimitra/etl-service/api-keys'
+    );
 
-    const adminService = new secretsmanager.Secret(this, 'AdminServiceSecrets', {
-      secretName: 'krishimitra/admin-service/config',
-      description: 'Admin service configuration secrets',
-      secretStringValue: cdk.SecretValue.unsafePlainText(
-        JSON.stringify({ smtp_password: 'REPLACE_ME' })
-      ),
-      removalPolicy: cdk.RemovalPolicy.RETAIN,
-    });
+    const adminService = secretsmanager.Secret.fromSecretNameV2(
+      this, 'AdminServiceSecrets', 'krishimitra/admin-service/config'
+    );
 
     return { dbCredentials, aiService, authService, farmService, etlService, adminService };
   }
 
   // ── RDS PostgreSQL (Multi-AZ + pgvector) ────────────────────────────────────
   private createDatabase(
-    vpc: ec2.Vpc,
+    vpc: ec2.IVpc,
     sg: ec2.SecurityGroup,
     credentials: secretsmanager.ISecret
   ) {
     // Parameter group enabling pgvector extension
     const parameterGroup = new rds.ParameterGroup(this, 'RdsParamGroup', {
       engine: rds.DatabaseInstanceEngine.postgres({
-        version: rds.PostgresEngineVersion.VER_15_4,
+        version: rds.PostgresEngineVersion.VER_15_13,
       }),
       description: 'KrishiMitra RDS parameter group - enables pgvector',
       parameters: {
@@ -267,7 +239,7 @@ export class KrishiMitraStack extends cdk.Stack {
 
     const instance = new rds.DatabaseInstance(this, 'KrishiMitraRds', {
       engine: rds.DatabaseInstanceEngine.postgres({
-        version: rds.PostgresEngineVersion.VER_15_4,
+        version: rds.PostgresEngineVersion.VER_15_13,
       }),
       instanceType: ec2.InstanceType.of(ec2.InstanceClass.T3, ec2.InstanceSize.MEDIUM),
       vpc,
@@ -300,11 +272,10 @@ export class KrishiMitraStack extends cdk.Stack {
   }
 
   // ── ElastiCache Redis ────────────────────────────────────────────────────────
-  private createCache(vpc: ec2.Vpc, sg: ec2.SecurityGroup) {
+  private createCache(vpc: ec2.IVpc, sg: ec2.SecurityGroup) {
     const subnetGroup = new elasticache.CfnSubnetGroup(this, 'RedisSubnetGroup', {
       description: 'KrishiMitra Redis subnet group',
       subnetIds: vpc.selectSubnets({ subnetType: ec2.SubnetType.PRIVATE_ISOLATED }).subnetIds,
-      cacheSubnetGroupName: 'krishimitra-redis-subnets',
     });
 
     const replicationGroup = new elasticache.CfnReplicationGroup(this, 'KrishiMitraRedis', {
@@ -313,7 +284,7 @@ export class KrishiMitraStack extends cdk.Stack {
       cacheNodeType: 'cache.t3.medium',
       engine: 'redis',
       engineVersion: '7.1',
-      cacheSubnetGroupName: subnetGroup.cacheSubnetGroupName,
+      cacheSubnetGroupName: subnetGroup.ref,
       securityGroupIds: [sg.securityGroupId],
       atRestEncryptionEnabled: true,
       transitEncryptionEnabled: true,
@@ -418,20 +389,36 @@ export class KrishiMitraStack extends cdk.Stack {
 
   // ── ECS Cluster & Fargate Services ──────────────────────────────────────────
   private createEcsCluster(
-    vpc: ec2.Vpc,
+    vpc: ec2.IVpc,
     sg: ec2.SecurityGroup,
     iamPolicies: KrishiMitraIamPolicies,
     secrets: ReturnType<KrishiMitraStack['createSecrets']>
   ) {
+    const desiredCountContext = this.node.tryGetContext('serviceDesiredCount');
+    const parsedDesiredCount = Number(desiredCountContext);
+    const serviceDesiredCount =
+      Number.isInteger(parsedDesiredCount) && parsedDesiredCount >= 0 ? parsedDesiredCount : 0;
+
     const cluster = new ecs.Cluster(this, 'KrishiMitraCluster', {
       vpc,
-      clusterName: 'krishimitra',
       containerInsights: true,
       enableFargateCapacityProviders: true,
     });
 
     // Shared execution role (ECR pull + CloudWatch logs)
     const executionRole = iamPolicies.ecsExecutionRole;
+
+    let hasPrivateWithEgress = false;
+    try {
+      hasPrivateWithEgress =
+        vpc.selectSubnets({ subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS }).subnets.length > 0;
+    } catch {
+      hasPrivateWithEgress = false;
+    }
+
+    const serviceSubnetType = hasPrivateWithEgress
+      ? ec2.SubnetType.PRIVATE_WITH_EGRESS
+      : ec2.SubnetType.PRIVATE_ISOLATED;
 
     // Define services: auth, farm, ai, market, etl, admin
     const services = [
@@ -495,9 +482,9 @@ export class KrishiMitraStack extends cdk.Stack {
       new ecs.FargateService(this, `${svc.name}Service`, {
         cluster,
         taskDefinition: taskDef,
-        desiredCount: 2,
+        desiredCount: serviceDesiredCount,
         securityGroups: [sg],
-        vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
+        vpcSubnets: { subnetType: serviceSubnetType },
         enableExecuteCommand: false,
         circuitBreaker: { rollback: true },
         deploymentController: { type: ecs.DeploymentControllerType.ECS },
@@ -763,3 +750,8 @@ export class KrishiMitraStack extends cdk.Stack {
     });
   }
 }
+
+
+
+
+
