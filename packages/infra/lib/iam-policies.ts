@@ -82,6 +82,16 @@ export class KrishiMitraIamPolicies extends Construct {
     dbCredentials.grantRead(role);
     this.addXRayAndLogsPolicy(role, 'auth-service');
 
+    // Allow sending OTP SMS via SNS Direct Publish to phone numbers (no topic ARN)
+    role.addToPolicy(
+      new iam.PolicyStatement({
+        sid: 'SnsPublishSms',
+        effect: iam.Effect.ALLOW,
+        actions: ['sns:Publish'],
+        resources: ['*'],
+      })
+    );
+
     return role;
   }
 
