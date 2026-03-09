@@ -471,6 +471,9 @@ export class KrishiMitraStack extends cdk.Stack {
           SERVICE_NAME: `${svc.name}-service`,
           AWS_REGION: this.region,
           DB_SECRET_NAME: secrets.dbCredentials.secretName,
+          SNS_ENABLED: 'true',
+          SPEECH_ENABLED: 'true',
+          BEDROCK_ENABLED: 'true',
         },
         secrets: {
           DB_PASSWORD: ecs.Secret.fromSecretsManager(secrets.dbCredentials, 'password'),
