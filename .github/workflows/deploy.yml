@@ -327,8 +327,7 @@ jobs:
           DB_HOST=$(echo "$SECRET" | jq -r '.host')
           DB_PORT=$(echo "$SECRET" | jq -r '.port')
           DB_NAME=$(echo "$SECRET" | jq -r '.dbname')
-          # sslmode=no-verify: trust RDS cert without verifying CA (acceptable within private VPC)
-          DATABASE_URL="postgresql://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=no-verify"
+          DATABASE_URL="postgresql://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
 
           # Write overrides to a file — avoids shell-quoting issues with --overrides inline JSON
           jq -n \
@@ -339,7 +338,6 @@ jobs:
                 "command": ["node", "dist/db/migrate.js"],
                 "environment": [
                   {"name": "DATABASE_URL", "value": $url},
-                  {"name": "DB_SSL",       "value": "false"},
                   {"name": "NODE_ENV",     "value": "production"}
                 ]
               }]

@@ -5,10 +5,16 @@ import * as path from 'path';
 const MIGRATIONS_DIR = path.join(__dirname, 'migrations');
 
 function getPool(): Pool {
+  const connectionString =
+    process.env.DATABASE_URL ||
+    'postgresql://postgres:postgres@localhost:5432/krishimitra';
+  const isLocal =
+    connectionString.includes('localhost') ||
+    connectionString.includes('127.0.0.1');
   return new Pool({
-    connectionString:
-      process.env.DATABASE_URL ||
-      'postgresql://postgres:postgres@localhost:5432/krishimitra',
+    connectionString,
+    // Skip CA verification for RDS (Amazon CA not in Alpine trust store; safe within private VPC)
+    ssl: isLocal ? false : { rejectUnauthorized: false },
   });
 }
 

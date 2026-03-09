@@ -64,7 +64,8 @@ export async function timedQuery(
 interface DbCredentials {
   host: string;
   port: number;
-  database: string;
+  database?: string; // standard key
+  dbname?: string;   // RDS Secrets Manager uses 'dbname' instead of 'database'
   username: string;
   password: string;
 }
@@ -101,10 +102,11 @@ function buildPoolConfig(creds: DbCredentials): PoolConfig {
   return {
     host: creds.host,
     port: creds.port,
-    database: creds.database,
+    database: creds.database ?? creds.dbname, // RDS secrets use 'dbname', not 'database'
     user: creds.username,
     password: creds.password,
-    ssl: process.env.DB_SSL === 'false' ? false : { rejectUnauthorized: true },
+    // Use SSL but skip CA verification (RDS CA not in Alpine trust store; safe within private VPC)
+    ssl: process.env.DB_SSL === 'false' ? false : { rejectUnauthorized: false },
     ...DEFAULT_POOL_CONFIG,
   };
 }
