@@ -299,18 +299,11 @@ jobs:
   run-migrations:
     name: Run DB Migrations
     runs-on: ubuntu-latest
-    needs: deploy-infra
-    timeout-minutes: 10
-    if: ${{ needs.deploy-infra.result == 'success' }}
+    needs: [deploy-infra, build-push-backend]
+    timeout-minutes: 15
+    if: ${{ needs.build-push-backend.result == 'success' }}
 
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -318,15 +311,34 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Install dependencies
-        run: npm ci
+      # RDS is in a private VPC — run migrations as a one-off ECS task inside the VPC
+      - name: Run migrations via ECS run-task
+        run: |
+          CLUSTER="arn:aws:ecs:us-east-1:${{ secrets.AWS_ACCOUNT_ID }}:cluster/KrishiMitraStackHotfix2-KrishiMitraClusterA0D08B80-meB2p2FKQtqg"
+          TASK_DEF="KrishiMitraStackHotfix2authTaskDefC52A726E"
 
-      - name: Run migrations
-        run: npm run migrate
-        working-directory: packages/backend
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          NODE_ENV: production
+          TASK_ARN=$(aws ecs run-task \
+            --cluster "$CLUSTER" \
+            --task-definition "$TASK_DEF" \
+            --launch-type FARGATE \
+            --network-configuration 'awsvpcConfiguration={subnets=["subnet-0c729350aa23ed0f6","subnet-00be4a4e183872cd4"],securityGroups=["sg-01ed12a3860630e1c"],assignPublicIp=DISABLED}' \
+            --overrides '{"containerOverrides":[{"name":"authContainer","command":["node","dist/db/migrate.js"]}]}' \
+            --query 'tasks[0].taskArn' --output text)
+
+          echo "Migration task: $TASK_ARN"
+
+          # Wait up to 10 min for the task to complete
+          aws ecs wait tasks-stopped --cluster "$CLUSTER" --tasks "$TASK_ARN"
+
+          EXIT_CODE=$(aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$TASK_ARN" \
+            --query 'tasks[0].containers[0].exitCode' --output text)
+
+          echo "Migration exit code: $EXIT_CODE"
+          if [ "$EXIT_CODE" != "0" ]; then
+            echo "Migration failed with exit code $EXIT_CODE"
+            exit 1
+          fi
+          echo "Migrations completed successfully"
 
   # ─────────────────────────────────────────────────────────────────────────────
   # 7. Smoke test after full deploy

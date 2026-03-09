@@ -27,8 +27,8 @@ COPY --from=builder --chown=krishimitra:nodejs /app/dist ./dist
 COPY --from=builder --chown=krishimitra:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=krishimitra:nodejs /app/package.json ./
 
-# Copy migrations (needed at runtime)
-COPY --chown=krishimitra:nodejs src/db/migrations ./src/db/migrations
+# Copy migrations to dist/db/migrations (migrate.js uses __dirname = dist/db)
+COPY --from=builder --chown=krishimitra:nodejs /app/src/db/migrations ./dist/db/migrations
 
 USER krishimitra
 
