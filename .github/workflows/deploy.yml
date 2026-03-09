@@ -50,6 +50,10 @@ jobs:
         env:
           CI: true
           NODE_ENV: test
+          JWT_SECRET: krishimitra-dev-secret
+          SPEECH_ENABLED: "false"
+          BEDROCK_ENABLED: "false"
+          SNS_ENABLED: "false"
 
       - name: Frontend tests
         run: npm test -- --watchAll=false --passWithNoTests

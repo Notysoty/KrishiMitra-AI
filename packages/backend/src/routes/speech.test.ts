@@ -1,5 +1,12 @@
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
+
+// Force mock provider (avoids AWS Transcribe dynamic-import error in Jest/CJS)
+jest.mock('../services/ai/AwsCloudSpeechProvider', () => ({
+  isSpeechConfigured: () => false,
+  AwsCloudSpeechProvider: jest.fn(),
+}));
+
 import app from '../index';
 
 const JWT_SECRET = 'krishimitra-dev-secret';
