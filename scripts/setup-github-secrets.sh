@@ -28,8 +28,7 @@ gh secret set JWT_SECRET             --repo "$REPO" --body "${JWT_SECRET:?JWT_SE
 gh secret set DATABASE_URL           --repo "$REPO" --body "${DATABASE_URL:-}"
 
 # ── VAPID (Web Push) ─────────────────────────────────────────────────────────
-# Public key is non-sensitive; private key must be passed via env var
-gh secret set VAPID_PUBLIC_KEY       --repo "$REPO" --body "BJZUTttX1bcyIoutQMi5mhnK5eTRmTFDv2ImAGPvsp3stmPmk1vJBSvZYWPSV9XF9WVgvcueC16j4l9gxky9Z_c"
+gh secret set VAPID_PUBLIC_KEY       --repo "$REPO" --body "${VAPID_PUBLIC_KEY:?VAPID_PUBLIC_KEY env var is required}"
 gh secret set VAPID_PRIVATE_KEY      --repo "$REPO" --body "${VAPID_PRIVATE_KEY:?VAPID_PRIVATE_KEY env var is required}"
 
 # ── Frontend env ─────────────────────────────────────────────────────────────
