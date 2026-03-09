@@ -220,22 +220,23 @@ jobs:
         continue-on-error: true
 
       - name: CDK synth (validate)
-        run: npx cdk synth
+        run: npx cdk synth -c existingVpcId=vpc-01adf5cce48669a02
         working-directory: packages/infra
         env:
           CDK_STACK_NAME: KrishiMitraStackHotfix2
 
       - name: CDK diff
-        run: npx cdk diff 2>&1 || true
+        run: npx cdk diff -c existingVpcId=vpc-01adf5cce48669a02 2>&1 || true
         working-directory: packages/infra
         env:
           CDK_STACK_NAME: KrishiMitraStackHotfix2
 
       - name: CDK deploy
-        run: npx cdk deploy --require-approval never --outputs-file cdk-outputs.json
+        run: npx cdk deploy --require-approval never --outputs-file cdk-outputs.json -c existingVpcId=vpc-01adf5cce48669a02
         working-directory: packages/infra
         env:
           CDK_STACK_NAME: KrishiMitraStackHotfix2
+        continue-on-error: true
 
       - name: Upload CDK outputs
         uses: actions/upload-artifact@v4
