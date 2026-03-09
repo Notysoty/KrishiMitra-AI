@@ -3,7 +3,34 @@ import {
   isAuthenticated, refreshToken, isTokenExpired, getUser, isBiometricAvailable,
 } from './authClient';
 
-beforeEach(() => localStorage.clear());
+function makeJwt(phone: string, expOffset = 3600): string {
+  const header = btoa(JSON.stringify({ alg: 'HS256' }));
+  const payload = btoa(JSON.stringify({ phone, sub: 'u1', roles: ['farmer'], exp: Math.floor(Date.now() / 1000) + expOffset }));
+  return `${header}.${payload}.fakeSignature`;
+}
+
+beforeEach(() => {
+  localStorage.clear();
+  global.fetch = jest.fn((url: string, options?: RequestInit) => {
+    const body = options?.body ? JSON.parse(options.body as string) : {};
+    if (url.endsWith('/login')) {
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ message: 'OTP sent' }) } as Response);
+    }
+    if (url.endsWith('/verify-otp')) {
+      if (!body.otp || body.otp.length < 4) {
+        return Promise.resolve({ ok: false, json: () => Promise.resolve({ error: 'Invalid OTP' }) } as Response);
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ token: makeJwt(body.phone) }) } as Response);
+    }
+    if (url.endsWith('/register')) {
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ token: makeJwt(body.phone) }) } as Response);
+    }
+    if (url.endsWith('/refresh')) {
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ token: makeJwt('+911234567890', 7200) }) } as Response);
+    }
+    return Promise.resolve({ ok: false, json: () => Promise.resolve({ error: 'Not found' }) } as Response);
+  }) as jest.Mock;
+});
 
 test('login returns success', async () => {
   const result = await login('+911234567890');

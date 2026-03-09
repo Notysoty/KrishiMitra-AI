@@ -5,7 +5,25 @@ import { MemoryRouter } from 'react-router-dom';
 import { I18nProvider } from '../i18n';
 import { RegisterPage } from './RegisterPage';
 
-beforeEach(() => localStorage.clear());
+function makeJwt(phone: string, expOffset = 3600): string {
+  const header = btoa(JSON.stringify({ alg: 'HS256' }));
+  const payload = btoa(JSON.stringify({ phone, sub: 'u1', roles: ['farmer'], exp: Math.floor(Date.now() / 1000) + expOffset }));
+  return `${header}.${payload}.fakeSignature`;
+}
+
+beforeEach(() => {
+  localStorage.clear();
+  global.fetch = jest.fn((url: string, options?: RequestInit) => {
+    const body = options?.body ? JSON.parse(options.body as string) : {};
+    if (url.endsWith('/register')) {
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ token: makeJwt(body.phone) }) } as Response);
+    }
+    if (url.endsWith('/verify-otp')) {
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ token: makeJwt(body.phone) }) } as Response);
+    }
+    return Promise.resolve({ ok: false, json: () => Promise.resolve({ error: 'Not found' }) } as Response);
+  }) as jest.Mock;
+});
 
 function renderRegisterPage() {
   return render(
