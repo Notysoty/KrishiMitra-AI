@@ -289,6 +289,7 @@ jobs:
               --service "$SERVICE_ARN" \
               --force-new-deployment \
               --desired-count 1 \
+              --network-configuration 'awsvpcConfiguration={subnets=["subnet-0f6a9113df5495b94","subnet-0809ece0148744847"],securityGroups=["sg-01ed12a3860630e1c"],assignPublicIp=DISABLED}' \
               --no-cli-pager
           done
           echo "All ECS services updated"
@@ -321,7 +322,7 @@ jobs:
             --cluster "$CLUSTER" \
             --task-definition "$TASK_DEF" \
             --launch-type FARGATE \
-            --network-configuration 'awsvpcConfiguration={subnets=["subnet-0c729350aa23ed0f6","subnet-00be4a4e183872cd4"],securityGroups=["sg-01ed12a3860630e1c"],assignPublicIp=DISABLED}' \
+            --network-configuration 'awsvpcConfiguration={subnets=["subnet-0f6a9113df5495b94","subnet-0809ece0148744847"],securityGroups=["sg-01ed12a3860630e1c"],assignPublicIp=DISABLED}' \
             --overrides '{"containerOverrides":[{"name":"authContainer","command":["node","dist/db/migrate.js"]}]}' \
             --query 'tasks[0].taskArn' --output text)
 
