@@ -318,12 +318,27 @@ jobs:
           CLUSTER="arn:aws:ecs:us-east-1:${{ secrets.AWS_ACCOUNT_ID }}:cluster/KrishiMitraStackHotfix2-KrishiMitraClusterA0D08B80-meB2p2FKQtqg"
           TASK_DEF="KrishiMitraStackHotfix2authTaskDefC52A726E"
 
+          # Build DATABASE_URL from Secrets Manager so migrate.js can connect to RDS
+          SECRET=$(aws secretsmanager get-secret-value \
+            --secret-id krishimitra/db-credentials/primary \
+            --query 'SecretString' --output text)
+          DB_USER=$(echo "$SECRET" | jq -r '.username')
+          DB_PASS=$(echo "$SECRET" | jq -r '.password')
+          DB_HOST=$(echo "$SECRET" | jq -r '.host')
+          DB_PORT=$(echo "$SECRET" | jq -r '.port')
+          DB_NAME=$(echo "$SECRET" | jq -r '.dbname')
+          DATABASE_URL="postgresql://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
+
+          OVERRIDES=$(jq -n \
+            --arg url "$DATABASE_URL" \
+            '{"containerOverrides":[{"name":"authContainer","command":["node","dist/db/migrate.js"],"environment":[{"name":"DATABASE_URL","value":$url}]}]}')
+
           TASK_ARN=$(aws ecs run-task \
             --cluster "$CLUSTER" \
             --task-definition "$TASK_DEF" \
             --launch-type FARGATE \
             --network-configuration 'awsvpcConfiguration={subnets=["subnet-0f6a9113df5495b94","subnet-0809ece0148744847"],securityGroups=["sg-01ed12a3860630e1c"],assignPublicIp=DISABLED}' \
-            --overrides '{"containerOverrides":[{"name":"authContainer","command":["node","dist/db/migrate.js"]}]}' \
+            --overrides "$OVERRIDES" \
             --query 'tasks[0].taskArn' --output text)
 
           echo "Migration task: $TASK_ARN"
@@ -336,6 +351,18 @@ jobs:
 
           echo "Migration exit code: $EXIT_CODE"
           if [ "$EXIT_CODE" != "0" ]; then
+            # Print CloudWatch logs for debugging
+            echo "--- Migration logs ---"
+            LOG_STREAM=$(aws logs describe-log-streams \
+              --log-group-name /krishimitra/auth-service \
+              --order-by LastEventTime --descending \
+              --query 'logStreams[0].logStreamName' --output text 2>/dev/null || echo "")
+            if [ -n "$LOG_STREAM" ] && [ "$LOG_STREAM" != "None" ]; then
+              aws logs get-log-events \
+                --log-group-name /krishimitra/auth-service \
+                --log-stream-name "$LOG_STREAM" \
+                --query 'events[*].message' --output text 2>/dev/null || true
+            fi
             echo "Migration failed with exit code $EXIT_CODE"
             exit 1
           fi
