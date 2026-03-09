@@ -9,6 +9,7 @@ import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as wafv2 from 'aws-cdk-lib/aws-wafv2';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as ecr from 'aws-cdk-lib/aws-ecr';
+import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
@@ -77,7 +78,7 @@ export class KrishiMitraStack extends cdk.Stack {
     const cdn = this.createCloudFront(buckets.frontend);
 
     // ── 10. API Gateway + WAF ────────────────────────────────────────────────
-    const api = this.createApiGateway(compute.cluster);
+    const api = this.createApiGateway(vpc, compute.authService);
 
     // ── 11. CloudWatch Logs, Alarms & Dashboard ──────────────────────────────
     this.createObservability(database.instance, cache.replicationGroup);
@@ -430,6 +431,8 @@ export class KrishiMitraStack extends cdk.Stack {
       { name: 'admin', taskRole: iamPolicies.adminTaskRole, cpu: 512, memory: 1024 },
     ] as const;
 
+    let authService!: ecs.FargateService;
+
     for (const svc of services) {
       // Import existing log group (already created during first deploy attempt)
       const logGroup = logs.LogGroup.fromLogGroupName(
@@ -480,7 +483,7 @@ export class KrishiMitraStack extends cdk.Stack {
         },
       });
 
-      new ecs.FargateService(this, `${svc.name}Service`, {
+      const fargateService = new ecs.FargateService(this, `${svc.name}Service`, {
         cluster,
         taskDefinition: taskDef,
         desiredCount: serviceDesiredCount,
@@ -494,13 +497,17 @@ export class KrishiMitraStack extends cdk.Stack {
           { capacityProvider: 'FARGATE_SPOT', weight: 2 }, // Cost optimisation
         ],
       });
+
+      if (svc.name === 'auth') {
+        authService = fargateService;
+      }
     }
 
-    return { cluster };
+    return { cluster, authService };
   }
 
   // ── API Gateway + WAF ────────────────────────────────────────────────────────
-  private createApiGateway(_cluster: ecs.Cluster) {
+  private createApiGateway(vpc: ec2.IVpc, authService: ecs.FargateService) {
     // WAF Web ACL — rate limiting + common rule sets
     const webAcl = new wafv2.CfnWebACL(this, 'KrishiMitraWaf', {
       name: 'krishimitra-api-waf',
@@ -591,22 +598,91 @@ export class KrishiMitraStack extends cdk.Stack {
     });
     wafAssociation.node.addDependency(restApi.deploymentStage);
 
-    // Route groups — proxy to ECS via VPC Link (placeholder HTTP integration)
+    // ── NLB + VPC Link to route API Gateway → ECS ────────────────────────────
+    // All services run the same monorepo backend; route everything via auth service.
+    // NLB in the /24 private subnets (sufficient IP space).
+    const backendTargetGroup = new elbv2.NetworkTargetGroup(this, 'BackendTargetGroup', {
+      vpc,
+      port: 3000,
+      protocol: elbv2.Protocol.TCP,
+      targetType: elbv2.TargetType.IP,
+      healthCheck: {
+        protocol: elbv2.Protocol.HTTP,
+        path: '/health',
+        port: '3000',
+        healthyHttpCodes: '200',
+        interval: cdk.Duration.seconds(30),
+        healthyThresholdCount: 2,
+        unhealthyThresholdCount: 3,
+      },
+    });
+    authService.attachToNetworkTargetGroup(backendTargetGroup);
+
+    const nlb = new elbv2.NetworkLoadBalancer(this, 'KrishiMitraNlb', {
+      vpc,
+      internetFacing: false,
+      vpcSubnets: {
+        subnets: [
+          ec2.Subnet.fromSubnetId(this, 'NlbSubnet1', 'subnet-0f6a9113df5495b94'),
+          ec2.Subnet.fromSubnetId(this, 'NlbSubnet2', 'subnet-0809ece0148744847'),
+        ],
+      },
+    });
+    nlb.addListener('BackendListener', {
+      port: 80,
+      defaultTargetGroups: [backendTargetGroup],
+    });
+
+    const vpcLink = new apigateway.VpcLink(this, 'KrishiMitraVpcLink', {
+      targets: [nlb],
+      vpcLinkName: 'krishimitra-vpc-link',
+    });
+
+    // Route groups — proxy to ECS via NLB + VPC Link
+    // Frontend calls /auth/*, /ai/*, etc. (no /api/v1 prefix).
+    // Backend Express listens at /api/v1/*. The integration URI adds the prefix.
     const apiRoutes = [
-      { path: 'auth', description: 'Authentication service' },
-      { path: 'farms', description: 'Farm management service' },
-      { path: 'ai', description: 'AI assistant service' },
-      { path: 'markets', description: 'Market intelligence service' },
-      { path: 'alerts', description: 'Alert service' },
-      { path: 'sustainability', description: 'Sustainability service' },
-      { path: 'admin', description: 'Admin service' },
-      { path: 'disease', description: 'Disease classification service' },
-      { path: 'health', description: 'Health check' },
+      'auth', 'farms', 'ai', 'markets', 'alerts',
+      'sustainability', 'admin', 'disease', 'health',
     ];
 
-    for (const route of apiRoutes) {
-      const resource = restApi.root.addResource(route.path);
-      resource.addProxy({ anyMethod: true });
+    for (const routePath of apiRoutes) {
+      const resource = restApi.root.addResource(routePath);
+
+      // Direct method for the resource itself (e.g. GET /health)
+      resource.addMethod('ANY', new apigateway.HttpIntegration(
+        `http://${nlb.loadBalancerDnsName}/api/v1/${routePath}`,
+        {
+          httpMethod: 'ANY',
+          proxy: true,
+          options: {
+            connectionType: apigateway.ConnectionType.VPC_LINK,
+            vpcLink,
+          },
+        }
+      ));
+
+      // Proxy sub-resource for all child paths (e.g. /auth/send-otp)
+      resource.addProxy({
+        anyMethod: true,
+        defaultIntegration: new apigateway.HttpIntegration(
+          `http://${nlb.loadBalancerDnsName}/api/v1/${routePath}/{proxy}`,
+          {
+            httpMethod: 'ANY',
+            proxy: true,
+            options: {
+              connectionType: apigateway.ConnectionType.VPC_LINK,
+              vpcLink,
+              requestParameters: {
+                'integration.request.path.proxy': 'method.request.path.proxy',
+              },
+            },
+          }
+        ),
+        defaultMethodOptions: {
+          requestParameters: { 'method.request.path.proxy': true },
+        },
+      });
     }
 
     return { restApi, webAcl };
