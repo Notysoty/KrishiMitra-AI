@@ -182,6 +182,9 @@ export class KrishiMitraStack extends cdk.Stack {
     rds.addIngressRule(ecs, ec2.Port.tcp(5432), 'PostgreSQL from ECS');
     // Allow ECS tasks to reach Redis on port 6379
     redis.addIngressRule(ecs, ec2.Port.tcp(6379), 'Redis from ECS');
+    // Allow NLB health checks and traffic to reach ECS tasks on port 3000
+    // NLB has no SG — traffic comes from VPC CIDR
+    ecs.addIngressRule(ec2.Peer.ipv4(vpc.vpcCidrBlock), ec2.Port.tcp(3000), 'NLB to ECS port 3000');
 
     return { rds, redis, ecs, alb };
   }
@@ -475,11 +478,12 @@ export class KrishiMitraStack extends cdk.Stack {
         },
         portMappings: [{ containerPort: 3000 }],
         healthCheck: {
-          command: ['CMD-SHELL', 'curl -f http://localhost:3000/health || exit 1'],
+          // node:alpine has no curl — use Node.js built-in http module instead
+          command: ['CMD-SHELL', 'node -e "require(\'http\').get(\'http://localhost:3000/health\',r=>process.exit(r.statusCode===200?0:1)).on(\'error\',()=>process.exit(1))"'],
           interval: cdk.Duration.seconds(30),
-          timeout: cdk.Duration.seconds(5),
+          timeout: cdk.Duration.seconds(10),
           retries: 3,
-          startPeriod: cdk.Duration.seconds(60),
+          startPeriod: cdk.Duration.seconds(90),
         },
       });
 
