@@ -1,10 +1,19 @@
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
+
+const mockQuery = jest.fn();
+jest.mock('../db/pool', () => ({
+  initPool: jest.fn().mockResolvedValue(undefined),
+  getPool: () => ({ query: mockQuery, connect: jest.fn() }),
+}));
+
 import app from '../index';
+import { _setJwtSecret } from '../config/secrets';
 
-const JWT_SECRET = 'krishimitra-dev-secret';
+const JWT_SECRET = 'krishimitra-test-secret';
+beforeAll(() => { _setJwtSecret(JWT_SECRET); });
 
-function makeToken(overrides: Record<string, unknown> = {}) {
+function makeToken(overrides: any = {}) {
   return jwt.sign(
     {
       userId: 'farmer-1',

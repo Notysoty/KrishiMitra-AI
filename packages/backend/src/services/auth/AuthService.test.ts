@@ -24,12 +24,12 @@ describe('AuthService', () => {
         .mockResolvedValueOnce({ rows: [] }); // insert
 
       const user = await service.register({
-        phone: '9876543210',
+        phone: '+919876543210',
         name: 'Test Farmer',
         tenant_id: 'tenant-1',
       });
 
-      expect(user.phone).toBe('9876543210');
+      expect(user.phone).toBe('+919876543210');
       expect(user.name).toBe('Test Farmer');
       expect(user.roles).toEqual(['farmer']);
     });
@@ -44,7 +44,7 @@ describe('AuthService', () => {
       mockQuery.mockResolvedValueOnce({ rows: [{ id: 'existing' }] });
 
       await expect(
-        service.register({ phone: '9876543210', name: 'Dup', tenant_id: 't1' })
+        service.register({ phone: '+919876543210', name: 'Dup', tenant_id: 't1' })
       ).rejects.toThrow('User with this phone already exists');
     });
 
@@ -54,7 +54,7 @@ describe('AuthService', () => {
         .mockResolvedValueOnce({ rows: [] }); // tenant not found
 
       await expect(
-        service.register({ phone: '9876543210', name: 'No Tenant', tenant_id: 'bad' })
+        service.register({ phone: '+919876543210', name: 'No Tenant', tenant_id: 'bad' })
       ).rejects.toThrow('Tenant not found');
     });
   });
@@ -66,7 +66,7 @@ describe('AuthService', () => {
         rows: [{ id: 'user-1', tenant_id: 'tenant-1' }],
       });
 
-      const result = await service.login('9876543210', 'tenant-1');
+      const result = await service.login('+919876543210', 'tenant-1');
       expect(result.message).toBe('OTP sent successfully');
       expect(result.otp).toMatch(/^\d{6}$/);
     });
@@ -74,25 +74,25 @@ describe('AuthService', () => {
     it('should reject login for non-existent user', async () => {
       mockQuery.mockResolvedValueOnce({ rows: [] });
 
-      await expect(service.login('0000000000', 'tenant-1')).rejects.toThrow('User not found');
+      await expect(service.login('+910000000000', 'tenant-1')).rejects.toThrow('User not found');
     });
 
     it('should reject login when account is locked', async () => {
-      // Manually lock the account
-      _getLockoutStore().set('tenant-1:9876543210', {
+      // Manually lock the account (use normalized E.164 key)
+      _getLockoutStore().set('tenant-1:+919876543210', {
         failedAttempts: 5,
         lockedUntil: Date.now() + 900000,
       });
 
-      await expect(service.login('9876543210', 'tenant-1')).rejects.toThrow('Account is locked');
+      await expect(service.login('+919876543210', 'tenant-1')).rejects.toThrow('Account is locked');
     });
   });
 
   // ── verifyOtp ────────────────────────────────────────────────
   describe('verifyOtp', () => {
     it('should issue tokens for valid OTP', async () => {
-      // Setup: user exists, OTP stored
-      _getOtpStore().set('tenant-1:9876543210', {
+      // Setup: user exists, OTP stored (use normalized E.164 key)
+      _getOtpStore().set('tenant-1:+919876543210', {
         otp: '123456',
         expiresAt: Date.now() + 300000,
         userId: 'user-1',
@@ -100,11 +100,11 @@ describe('AuthService', () => {
       });
 
       mockQuery
-        .mockResolvedValueOnce({ rows: [{ id: 'user-1', tenant_id: 'tenant-1', roles: ['farmer'] }] }) // SELECT user
+        .mockResolvedValueOnce({ rows: [{ id: 'user-1', tenant_id: 'tenant-1', phone: '+919876543210', name: 'Test', roles: ['farmer'] }] }) // SELECT user
         .mockResolvedValueOnce({ rows: [] }) // UPDATE last_login
         .mockResolvedValueOnce({ rows: [] }); // INSERT session
 
-      const tokens = await service.verifyOtp('9876543210', 'tenant-1', '123456');
+      const tokens = await service.verifyOtp('+919876543210', 'tenant-1', '123456');
       expect(tokens.accessToken).toBeDefined();
       expect(tokens.refreshToken).toBeDefined();
       expect(tokens.expiresIn).toBe(86400);
@@ -116,7 +116,7 @@ describe('AuthService', () => {
     });
 
     it('should reject invalid OTP and decrement remaining attempts', async () => {
-      _getOtpStore().set('tenant-1:9876543210', {
+      _getOtpStore().set('tenant-1:+919876543210', {
         otp: '123456',
         expiresAt: Date.now() + 300000,
         userId: 'user-1',
@@ -124,12 +124,12 @@ describe('AuthService', () => {
       });
 
       await expect(
-        service.verifyOtp('9876543210', 'tenant-1', '000000')
+        service.verifyOtp('+919876543210', 'tenant-1', '000000')
       ).rejects.toThrow('Invalid OTP');
     });
 
     it('should reject expired OTP', async () => {
-      _getOtpStore().set('tenant-1:9876543210', {
+      _getOtpStore().set('tenant-1:+919876543210', {
         otp: '123456',
         expiresAt: Date.now() - 1000, // expired
         userId: 'user-1',
@@ -137,13 +137,13 @@ describe('AuthService', () => {
       });
 
       await expect(
-        service.verifyOtp('9876543210', 'tenant-1', '123456')
+        service.verifyOtp('+919876543210', 'tenant-1', '123456')
       ).rejects.toThrow('OTP has expired');
     });
 
     it('should reject when no OTP exists', async () => {
       await expect(
-        service.verifyOtp('9876543210', 'tenant-1', '123456')
+        service.verifyOtp('+919876543210', 'tenant-1', '123456')
       ).rejects.toThrow('No OTP found');
     });
   });
@@ -151,47 +151,39 @@ describe('AuthService', () => {
   // ── Account lockout ──────────────────────────────────────────
   describe('account lockout', () => {
     it('should lock account after 5 failed OTP attempts', async () => {
-      _getOtpStore().set('tenant-1:9876543210', {
-        otp: '123456',
-        expiresAt: Date.now() + 300000,
-        userId: 'user-1',
-        tenantId: 'tenant-1',
-      });
-
-      // Fail 5 times
+      // Fail 5 times (use normalized E.164 key)
       for (let i = 0; i < 5; i++) {
-        // Re-set OTP each time since it doesn't get deleted on wrong attempt
-        _getOtpStore().set('tenant-1:9876543210', {
+        _getOtpStore().set('tenant-1:+919876543210', {
           otp: '123456',
           expiresAt: Date.now() + 300000,
           userId: 'user-1',
           tenantId: 'tenant-1',
         });
         try {
-          await service.verifyOtp('9876543210', 'tenant-1', '000000');
+          await service.verifyOtp('+919876543210', 'tenant-1', '000000');
         } catch {
           // expected
         }
       }
 
-      expect(service.isLocked('tenant-1', '9876543210')).toBe(true);
+      expect(service.isLocked('tenant-1', '+919876543210')).toBe(true);
 
       // 6th attempt should be rejected with lockout message
-      _getOtpStore().set('tenant-1:9876543210', {
+      _getOtpStore().set('tenant-1:+919876543210', {
         otp: '123456',
         expiresAt: Date.now() + 300000,
         userId: 'user-1',
         tenantId: 'tenant-1',
       });
       await expect(
-        service.verifyOtp('9876543210', 'tenant-1', '123456')
+        service.verifyOtp('+919876543210', 'tenant-1', '123456')
       ).rejects.toThrow('Account is locked');
     });
 
     it('should clear lockout after successful OTP verification', async () => {
-      // Set 3 failed attempts
-      _getLockoutStore().set('tenant-1:9876543210', { failedAttempts: 3, lockedUntil: null });
-      _getOtpStore().set('tenant-1:9876543210', {
+      // Set 3 failed attempts (use normalized E.164 key)
+      _getLockoutStore().set('tenant-1:+919876543210', { failedAttempts: 3, lockedUntil: null });
+      _getOtpStore().set('tenant-1:+919876543210', {
         otp: '123456',
         expiresAt: Date.now() + 300000,
         userId: 'user-1',
@@ -199,13 +191,13 @@ describe('AuthService', () => {
       });
 
       mockQuery
-        .mockResolvedValueOnce({ rows: [{ id: 'user-1', tenant_id: 'tenant-1', roles: ['farmer'] }] })
+        .mockResolvedValueOnce({ rows: [{ id: 'user-1', tenant_id: 'tenant-1', phone: '+919876543210', name: 'Test', roles: ['farmer'] }] })
         .mockResolvedValueOnce({ rows: [] })
         .mockResolvedValueOnce({ rows: [] });
 
-      await service.verifyOtp('9876543210', 'tenant-1', '123456');
-      expect(service.isLocked('tenant-1', '9876543210')).toBe(false);
-      expect(service.getRemainingAttempts('tenant-1', '9876543210')).toBe(5);
+      await service.verifyOtp('+919876543210', 'tenant-1', '123456');
+      expect(service.isLocked('tenant-1', '+919876543210')).toBe(false);
+      expect(service.getRemainingAttempts('tenant-1', '+919876543210')).toBe(5);
     });
   });
 
@@ -226,8 +218,8 @@ describe('AuthService', () => {
   // ── refreshToken ─────────────────────────────────────────────
   describe('refreshToken', () => {
     it('should issue new tokens for valid refresh token', async () => {
-      // First get a valid token pair
-      _getOtpStore().set('tenant-1:9876543210', {
+      // First get a valid token pair (use normalized E.164 key)
+      _getOtpStore().set('tenant-1:+919876543210', {
         otp: '111111',
         expiresAt: Date.now() + 300000,
         userId: 'user-1',
@@ -235,15 +227,15 @@ describe('AuthService', () => {
       });
 
       mockQuery
-        .mockResolvedValueOnce({ rows: [{ id: 'user-1', tenant_id: 'tenant-1', roles: ['farmer'] }] })
+        .mockResolvedValueOnce({ rows: [{ id: 'user-1', tenant_id: 'tenant-1', phone: '+919876543210', name: 'Test', roles: ['farmer'] }] })
         .mockResolvedValueOnce({ rows: [] })
         .mockResolvedValueOnce({ rows: [] });
 
-      const initial = await service.verifyOtp('9876543210', 'tenant-1', '111111');
+      const initial = await service.verifyOtp('+919876543210', 'tenant-1', '111111');
 
       // Now refresh
       mockQuery
-        .mockResolvedValueOnce({ rows: [{ id: 'user-1', tenant_id: 'tenant-1', roles: ['farmer'] }] })
+        .mockResolvedValueOnce({ rows: [{ id: 'user-1', tenant_id: 'tenant-1', phone: '+919876543210', name: 'Test', roles: ['farmer'] }] })
         .mockResolvedValueOnce({ rows: [] });
 
       const refreshed = await service.refreshToken(initial.refreshToken);

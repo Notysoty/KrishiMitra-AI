@@ -5,6 +5,7 @@ import { _clearStores, _getOtpStore } from '../services/auth';
 // ── Mock pg Pool ───────────────────────────────────────────────
 const mockQuery = jest.fn();
 jest.mock('../db/pool', () => ({
+  initPool: jest.fn().mockResolvedValue(undefined),
   getPool: () => ({ query: mockQuery, connect: jest.fn() }),
 }));
 
@@ -17,17 +18,17 @@ describe('Auth Routes', () => {
   describe('POST /api/v1/auth/register', () => {
     it('should register a user and return 201', async () => {
       mockQuery
-        .mockResolvedValueOnce({ rows: [] }) // no existing
+        .mockResolvedValueOnce({ rows: [] }) // no existing user check
         .mockResolvedValueOnce({ rows: [{ id: 'tenant-1' }] }) // tenant exists
-        .mockResolvedValueOnce({ rows: [] }); // insert
+        .mockResolvedValueOnce({ rows: [] }) // insert user
+        .mockResolvedValueOnce({ rows: [{ id: 'user-1', tenant_id: 'tenant-1' }] }); // login SELECT
 
       const res = await request(app)
         .post('/api/v1/auth/register')
-        .send({ phone: '9876543210', name: 'Farmer', tenant_id: 'tenant-1' });
+        .send({ phone: '+919876543210', name: 'Farmer', tenant_id: 'tenant-1' });
 
       expect(res.status).toBe(201);
-      expect(res.body.phone).toBe('9876543210');
-      expect(res.body.roles).toEqual(['farmer']);
+      expect(res.body.message).toContain('Account created');
     });
 
     it('should return 400 for missing fields', async () => {
@@ -48,7 +49,7 @@ describe('Auth Routes', () => {
 
       const res = await request(app)
         .post('/api/v1/auth/login')
-        .send({ phone: '9876543210', tenant_id: 'tenant-1' });
+        .send({ phone: '+919876543210', tenant_id: 'tenant-1' });
 
       expect(res.status).toBe(200);
       expect(res.body.otp).toMatch(/^\d{6}$/);
@@ -65,7 +66,7 @@ describe('Auth Routes', () => {
 
   describe('POST /api/v1/auth/verify-otp', () => {
     it('should return tokens for valid OTP', async () => {
-      _getOtpStore().set('tenant-1:9876543210', {
+      _getOtpStore().set('tenant-1:+919876543210', {
         otp: '123456',
         expiresAt: Date.now() + 300000,
         userId: 'user-1',
@@ -73,13 +74,13 @@ describe('Auth Routes', () => {
       });
 
       mockQuery
-        .mockResolvedValueOnce({ rows: [{ id: 'user-1', tenant_id: 'tenant-1', roles: ['farmer'] }] })
+        .mockResolvedValueOnce({ rows: [{ id: 'user-1', tenant_id: 'tenant-1', phone: '+919876543210', name: 'Farmer', roles: ['farmer'] }] })
         .mockResolvedValueOnce({ rows: [] })
         .mockResolvedValueOnce({ rows: [] });
 
       const res = await request(app)
         .post('/api/v1/auth/verify-otp')
-        .send({ phone: '9876543210', tenant_id: 'tenant-1', otp: '123456' });
+        .send({ phone: '+919876543210', tenant_id: 'tenant-1', otp: '123456' });
 
       expect(res.status).toBe(200);
       expect(res.body.accessToken).toBeDefined();
@@ -88,7 +89,7 @@ describe('Auth Routes', () => {
     });
 
     it('should return 401 for invalid OTP', async () => {
-      _getOtpStore().set('tenant-1:9876543210', {
+      _getOtpStore().set('tenant-1:+919876543210', {
         otp: '123456',
         expiresAt: Date.now() + 300000,
         userId: 'user-1',
@@ -97,7 +98,7 @@ describe('Auth Routes', () => {
 
       const res = await request(app)
         .post('/api/v1/auth/verify-otp')
-        .send({ phone: '9876543210', tenant_id: 'tenant-1', otp: '000000' });
+        .send({ phone: '+919876543210', tenant_id: 'tenant-1', otp: '000000' });
 
       expect(res.status).toBe(401);
     });
@@ -111,7 +112,7 @@ describe('Auth Routes', () => {
 
     it('should return user profile with valid token', async () => {
       // Get a token first
-      _getOtpStore().set('tenant-1:9876543210', {
+      _getOtpStore().set('tenant-1:+919876543210', {
         otp: '123456',
         expiresAt: Date.now() + 300000,
         userId: 'user-1',
@@ -119,13 +120,13 @@ describe('Auth Routes', () => {
       });
 
       mockQuery
-        .mockResolvedValueOnce({ rows: [{ id: 'user-1', tenant_id: 'tenant-1', roles: ['farmer'] }] })
+        .mockResolvedValueOnce({ rows: [{ id: 'user-1', tenant_id: 'tenant-1', phone: '+919876543210', name: 'Farmer', roles: ['farmer'] }] })
         .mockResolvedValueOnce({ rows: [] })
         .mockResolvedValueOnce({ rows: [] });
 
       const loginRes = await request(app)
         .post('/api/v1/auth/verify-otp')
-        .send({ phone: '9876543210', tenant_id: 'tenant-1', otp: '123456' });
+        .send({ phone: '+919876543210', tenant_id: 'tenant-1', otp: '123456' });
 
       const token = loginRes.body.accessToken;
 
@@ -154,7 +155,7 @@ describe('Auth Routes', () => {
   describe('POST /api/v1/auth/logout', () => {
     it('should invalidate all sessions', async () => {
       // Get a token
-      _getOtpStore().set('tenant-1:9876543210', {
+      _getOtpStore().set('tenant-1:+919876543210', {
         otp: '123456',
         expiresAt: Date.now() + 300000,
         userId: 'user-1',
@@ -162,13 +163,13 @@ describe('Auth Routes', () => {
       });
 
       mockQuery
-        .mockResolvedValueOnce({ rows: [{ id: 'user-1', tenant_id: 'tenant-1', roles: ['farmer'] }] })
+        .mockResolvedValueOnce({ rows: [{ id: 'user-1', tenant_id: 'tenant-1', phone: '+919876543210', name: 'Farmer', roles: ['farmer'] }] })
         .mockResolvedValueOnce({ rows: [] })
         .mockResolvedValueOnce({ rows: [] });
 
       const loginRes = await request(app)
         .post('/api/v1/auth/verify-otp')
-        .send({ phone: '9876543210', tenant_id: 'tenant-1', otp: '123456' });
+        .send({ phone: '+919876543210', tenant_id: 'tenant-1', otp: '123456' });
 
       mockQuery.mockResolvedValueOnce({ rows: [] }); // DELETE sessions
 

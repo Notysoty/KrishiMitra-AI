@@ -19,7 +19,7 @@ router.post('/register', async (req: Request, res: Response) => {
     await authService.register({ phone, name, tenant_id, email, language_preference, roles });
     // Send OTP immediately after registration so the user can verify in one step
     const result = await authService.login(phone, tenant_id);
-    res.status(201).json({ message: 'Account created. OTP sent to your mobile number.', ...result });
+    res.status(201).json({ ...result, message: 'Account created. OTP sent to your mobile number.' });
   } catch (err) {
     handleError(res, err);
   }

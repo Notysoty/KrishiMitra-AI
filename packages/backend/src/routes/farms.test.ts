@@ -1,5 +1,6 @@
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
+import { _setJwtSecret } from '../config/secrets';
 import app from '../index';
 
 // ── Mock pg Pool ───────────────────────────────────────────────
@@ -8,6 +9,7 @@ const mockRelease = jest.fn();
 const mockClient = { query: mockQuery, release: mockRelease };
 
 jest.mock('../db/pool', () => ({
+  initPool: jest.fn().mockResolvedValue(undefined),
   getPool: () => ({
     query: mockQuery,
     connect: jest.fn().mockResolvedValue(mockClient),
@@ -15,9 +17,11 @@ jest.mock('../db/pool', () => ({
 }));
 
 // ── Helper: generate a valid JWT ───────────────────────────────
-const JWT_SECRET = 'krishimitra-dev-secret';
+const JWT_SECRET = 'krishimitra-test-secret';
 
-function makeToken(overrides: Record<string, unknown> = {}) {
+beforeAll(() => { _setJwtSecret(JWT_SECRET); });
+
+function makeToken(overrides = {}) {
   return jwt.sign(
     {
       userId: 'user-1',
