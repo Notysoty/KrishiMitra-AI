@@ -16,19 +16,6 @@ export function isAdmin(): boolean {
   return hasRole('admin') || hasRole('tenant_admin') || hasRole('platform_admin');
 }
 
-/** Converts a phone number to a deterministic UUID-format string safe for Postgres uuid columns. */
-function phoneToUuid(phone: string): string {
-  const digits = phone.replace(/\D/g, '').padStart(12, '0').slice(-12);
-  return `00000000-0000-4000-8000-${digits}`;
-}
-
-function createMockJwt(payload: Record<string, unknown>): string {
-  const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-  const body = btoa(JSON.stringify(payload));
-  const sig = btoa('mock-signature');
-  return `${header}.${body}.${sig}`;
-}
-
 function decodeJwtPayload(token: string): Record<string, unknown> | null {
   try {
     const parts = token.split('.');
@@ -76,37 +63,66 @@ export function getUser(): AuthUser | null {
   };
 }
 
+const BASE_URL = (process.env.REACT_APP_API_URL ?? 'http://localhost:3000') + '/auth';
+// Default tenant — single-tenant deployment
+const TENANT_ID = process.env.REACT_APP_TENANT_ID ?? '10000000-0000-4000-8000-000000000001';
+
+async function authFetch(path: string, body: Record<string, unknown>, token?: string): Promise<Response> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  return fetch(`${BASE_URL}${path}`, { method: 'POST', headers, body: JSON.stringify(body) });
+}
+
 export async function login(phone: string): Promise<{ success: boolean; message: string }> {
-  await new Promise(r => setTimeout(r, 100));
-  return { success: true, message: 'OTP sent' };
+  try {
+    const res = await authFetch('/login', { phone, tenant_id: TENANT_ID });
+    const data = await res.json();
+    if (!res.ok) return { success: false, message: data.error ?? data.message ?? 'Failed to send OTP' };
+    return { success: true, message: data.message ?? 'OTP sent' };
+  } catch {
+    return { success: false, message: 'Network error — please try again' };
+  }
 }
 
 export async function verifyOtp(phone: string, otp: string): Promise<{ success: boolean; token?: string; message: string }> {
-  await new Promise(r => setTimeout(r, 100));
-  if (otp.length < 4) return { success: false, message: 'Invalid OTP' };
-  const exp = Math.floor(Date.now() / 1000) + 3600;
-  const token = createMockJwt({ sub: phoneToUuid(phone), phone, roles: ['farmer'], exp });
-  storeToken(token);
-  return { success: true, token, message: 'Verified' };
+  try {
+    const res = await authFetch('/verify-otp', { phone, otp, tenant_id: TENANT_ID });
+    const data = await res.json();
+    if (!res.ok) return { success: false, message: data.error ?? data.message ?? 'Invalid OTP' };
+    const token = (data.token ?? data.accessToken) as string | undefined;
+    if (token) storeToken(token);
+    return { success: true, token, message: data.message ?? 'Verified' };
+  } catch {
+    return { success: false, message: 'Network error — please try again' };
+  }
 }
 
 export async function register(phone: string, name: string): Promise<{ success: boolean; token?: string; message: string }> {
-  await new Promise(r => setTimeout(r, 100));
-  const exp = Math.floor(Date.now() / 1000) + 3600;
-  const token = createMockJwt({ sub: phoneToUuid(phone), phone, name, roles: ['farmer'], exp });
-  storeToken(token);
-  return { success: true, token, message: 'Registered' };
+  try {
+    const res = await authFetch('/register', { phone, name, tenant_id: TENANT_ID });
+    const data = await res.json();
+    if (!res.ok) return { success: false, message: data.error ?? data.message ?? 'Registration failed' };
+    const token = (data.token ?? data.accessToken) as string | undefined;
+    if (token) storeToken(token);
+    return { success: true, token, message: data.message ?? 'Registered' };
+  } catch {
+    return { success: false, message: 'Network error — please try again' };
+  }
 }
 
 export async function refreshToken(): Promise<{ success: boolean; token?: string }> {
   const current = getToken();
   if (!current) return { success: false };
-  const payload = decodeJwtPayload(current);
-  if (!payload) return { success: false };
-  const exp = Math.floor(Date.now() / 1000) + 3600;
-  const token = createMockJwt({ ...payload, exp, iat: Date.now() });
-  storeToken(token);
-  return { success: true, token };
+  try {
+    const res = await authFetch('/refresh', { tenant_id: TENANT_ID }, current);
+    if (!res.ok) return { success: false };
+    const data = await res.json();
+    const token = (data.token ?? data.accessToken) as string | undefined;
+    if (token) storeToken(token);
+    return { success: !!token, token };
+  } catch {
+    return { success: false };
+  }
 }
 
 export function logout(): void {
